@@ -45,7 +45,7 @@ export const tools: ToolDefinition[] = [
     description: "整理 YAML 缩进，并支持后续与 JSON 互转。",
     category: "data-format",
     icon: "$file",
-    status: "planned",
+    status: "available",
   },
   {
     id: "base64-codec",
@@ -53,7 +53,7 @@ export const tools: ToolDefinition[] = [
     description: "在普通文本和 Base64 之间快速转换。",
     category: "encoding",
     icon: "$file",
-    status: "planned",
+    status: "available",
   },
   {
     id: "timestamp-converter",
@@ -61,7 +61,7 @@ export const tools: ToolDefinition[] = [
     description: "在时间戳和可读日期之间互相转换。",
     category: "time",
     icon: "$calendar",
-    status: "planned",
+    status: "available",
   },
   {
     id: "regex-tester",
@@ -69,7 +69,7 @@ export const tools: ToolDefinition[] = [
     description: "验证正则表达式并查看匹配结果。",
     category: "text",
     icon: "$search",
-    status: "planned",
+    status: "available",
   },
 ];
 
