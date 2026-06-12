@@ -1,0 +1,62 @@
+<script setup lang="ts">
+import { computed, ref } from "vue";
+
+import AppNavigation from "../components/AppNavigation.vue";
+import ToolStatusBar from "../components/ToolStatusBar.vue";
+import JsonFormatterView from "../pages/json-formatter/JsonFormatterView.vue";
+import { defaultToolId, findToolById } from "../tools/registry";
+
+/**
+ * 左侧导航抽屉开关状态。
+ *
+ * 桌面端默认展开；导航宽度保持紧凑，避免挤压开发工具的主工作区。
+ */
+const drawer = ref(true);
+
+/**
+ * 当前选中的工具 ID。
+ *
+ * 第一阶段默认进入 JSON 格式化器；后续可改为首页或最近一次使用的工具。
+ */
+const currentToolId = ref(defaultToolId);
+
+/**
+ * 当前工具定义。
+ *
+ * 这里保留兜底逻辑，避免注册表调整时出现空对象导致页面渲染失败。
+ */
+const currentTool = computed(() => {
+  return findToolById(currentToolId.value) ?? findToolById(defaultToolId)!;
+});
+
+/**
+ * 切换当前工具。
+ *
+ * 导航组件已经过滤了规划中的工具，这里只负责更新当前工具状态。
+ */
+function selectTool(toolId: string) {
+  currentToolId.value = toolId;
+}
+</script>
+
+<template>
+  <v-app>
+    <v-navigation-drawer v-model="drawer" width="248">
+      <AppNavigation
+        :current-tool-id="currentToolId"
+        @select-tool="selectTool"
+      />
+    </v-navigation-drawer>
+
+    <ToolStatusBar
+      :current-tool="currentTool"
+      @toggle-navigation="drawer = !drawer"
+    />
+
+    <v-main style="overflow: hidden">
+      <v-container class="pa-2" fluid style="height: 100%; overflow: hidden">
+        <JsonFormatterView v-if="currentToolId === 'json-formatter'" />
+      </v-container>
+    </v-main>
+  </v-app>
+</template>
