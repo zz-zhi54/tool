@@ -1,9 +1,8 @@
 <script setup lang="ts">
 import { computed, onBeforeUnmount, ref } from "vue";
 
-import CodePanel from "../../components/CodePanel.vue";
+import InputPanel from "./InputPanel.vue";
 import JsonTreePanel from "./JsonTreePanel.vue";
-import ToolActionBar from "../../components/ToolActionBar.vue";
 import type { JsonValue } from "../../tools/json/jsonTypes";
 import {
   formatJson,
@@ -48,9 +47,6 @@ const parsedValue = computed<JsonValue | undefined>(() => {
 });
 
 const hasInput = computed(() => input.value.trim().length > 0);
-const inputHasError = computed(
-  () => !validation.value.empty && !validation.value.valid,
-);
 
 /**
  * 输入面板宽度样式。
@@ -241,14 +237,52 @@ onBeforeUnmount(stopResize);
         {{ stats.lines }} 行
       </v-chip>
 
-      <ToolActionBar
-        :disabled="!hasInput"
-        :has-output="hasInput"
-        @clear="handleClear"
-        @copy="handleCopy"
-        @format="handleFormat"
-        @minify="handleMinify"
-      />
+      <!-- 操作按钮：格式化、压缩、复制、清空 -->
+      <div class="d-flex align-center ga-1">
+        <v-btn
+          color="primary"
+          density="compact"
+          prepend-icon="$success"
+          :disabled="!hasInput"
+          size="small"
+          text="格式化"
+          variant="tonal"
+          @click="handleFormat"
+        />
+
+        <v-btn
+          color="secondary"
+          density="compact"
+          prepend-icon="$collapse"
+          :disabled="!hasInput"
+          size="small"
+          text="压缩"
+          variant="tonal"
+          @click="handleMinify"
+        />
+
+        <v-btn
+          color="success"
+          density="compact"
+          prepend-icon="$file"
+          :disabled="!hasInput"
+          size="small"
+          text="复制"
+          variant="tonal"
+          @click="handleCopy"
+        />
+
+        <v-btn
+          color="warning"
+          density="compact"
+          prepend-icon="$clear"
+          :disabled="!hasInput"
+          size="small"
+          text="清空"
+          variant="text"
+          @click="handleClear"
+        />
+      </div>
     </v-toolbar>
 
     <!--
@@ -267,13 +301,7 @@ onBeforeUnmount(stopResize);
     >
       <!-- 输入 JSON 面板 -->
       <section style="min-width: 0; min-height: 0" :style="inputPaneStyle">
-        <CodePanel
-          v-model="input"
-          :error="inputHasError"
-          icon="$file"
-          placeholder='粘贴需要处理的 JSON，例如：{ "name": "tool" }'
-          title="输入 JSON"
-        />
+        <InputPanel v-model="input" />
       </section>
 
       <!-- 拖拽分割条 -->

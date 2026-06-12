@@ -3,7 +3,7 @@ import { computed, ref } from "vue";
 
 import AppNavigation from "../components/AppNavigation.vue";
 import ToolStatusBar from "../components/ToolStatusBar.vue";
-import JsonFormatterView from "../pages/json-formatter/JsonFormatterView.vue";
+import JsonFormatterView from "../pages/json-formatter/index.vue";
 import { defaultToolId, findToolById } from "../tools/registry";
 
 /**

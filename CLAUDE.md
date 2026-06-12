@@ -42,8 +42,8 @@
 ### 页面与组件
 
 - `src/layouts/AppShell.vue` — 主布局：左侧导航抽屉 + 顶部状态栏 + 工具内容区。
-- `src/components/` — 共享组件：`AppNavigation`（侧边栏）、`ToolActionBar`（操作按钮）、`ToolStatusBar`（顶部栏）、`ThemeMenu`（主题切换）、`CodePanel`（带搜索的文本编辑面板）、`SearchBar`。
-- `src/pages/json-formatter/` — 唯一已实现的工具，双栏布局（输入 + JSON 树），支持格式化、压缩、搜索。
+- `src/components/` — 共享组件：`AppNavigation`（侧边栏）、`ToolStatusBar`（顶部栏）。
+- `src/pages/json-formatter/` — 唯一已实现的工具，双栏布局（输入 + JSON 树），支持格式化、压缩。文件：`index.vue`（布局 + 业务逻辑）、`InputPanel.vue`（输入面板）、`JsonTreePanel.vue`（树形结构面板）。
 - `src/tools/json/jsonFormatter.ts` — 纯函数：`validateJson`、`formatJson`、`minifyJson`、`getTextStats`。
 
 ### Rust 后端
@@ -64,4 +64,5 @@
 
 - 项目已配置 Prettier，配置文件为空对象（`.prettierrc` 是 `{}`），并忽略 `build` 和 `coverage`。
 - 主题系统使用 Vuetify 内置的 system/light/dark 模式，无自定义颜色。
-- 未发现 Cursor rules 或 GitHub Copilot instructions。
+- 工具页面统一使用 `index.vue` 作为入口，左右面板各自独立为一个组件，被 index 引用。
+- 组件拆分原则：只被用一次且体量小的组件应内联到父组件，避免过度拆分。能用浏览器原生能力（如 Ctrl+F 搜索 textarea）的场景不要自定义实现。

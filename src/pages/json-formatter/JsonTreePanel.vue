@@ -1,9 +1,7 @@
 <script setup lang="ts">
-import { computed, ref, useTemplateRef, watch } from "vue";
+import { computed, nextTick, ref, useTemplateRef, watch } from "vue";
 
 import type { JsonValue } from "../../tools/json/jsonTypes";
-
-import SearchBar from "../../components/SearchBar.vue";
 
 interface JsonTreeNode {
   id: string;
@@ -19,7 +17,8 @@ const props = defineProps<{
 
 const openedNodes = ref<string[]>([]);
 const searchQuery = ref("");
-const searchBarRef = useTemplateRef<typeof SearchBar>("searchBarRef");
+const searchVisible = ref(false);
+const searchFieldRef = useTemplateRef<HTMLElement>("searchField");
 
 /**
  * 树形视图数据。
@@ -168,6 +167,23 @@ function collapseAll() {
 }
 
 /**
+ * 切换搜索框可见性。
+ *
+ * 展开时自动聚焦输入框；收起时清空搜索关键字，回到完整树视图。
+ */
+async function toggleSearch() {
+  if (searchVisible.value) {
+    searchQuery.value = "";
+    searchVisible.value = false;
+    return;
+  }
+
+  searchVisible.value = true;
+  await nextTick();
+  searchFieldRef.value?.focus();
+}
+
+/**
  * 收集所有可展开节点 ID。
  */
 function collectExpandableIds(nodes: JsonTreeNode[]): string[] {
@@ -202,7 +218,7 @@ function collectExpandableIds(nodes: JsonTreeNode[]): string[] {
         icon="$search"
         size="x-small"
         variant="text"
-        @click.stop="searchBarRef?.toggle()"
+        @click.stop="toggleSearch"
       />
 
       <v-btn-group density="compact" variant="tonal">
@@ -213,13 +229,20 @@ function collectExpandableIds(nodes: JsonTreeNode[]): string[] {
 
     <v-divider />
 
-    <SearchBar
-      ref="searchBarRef"
-      v-model="searchQuery"
-      placeholder="搜索字段或值"
-    />
+    <div v-if="searchVisible" class="px-2 py-1">
+      <v-text-field
+        ref="searchField"
+        v-model="searchQuery"
+        clearable
+        density="compact"
+        hide-details
+        placeholder="搜索字段或值"
+        single-line
+        variant="outlined"
+      />
+    </div>
 
-    <v-divider v-if="searchBarRef?.visible" />
+    <v-divider v-if="searchVisible" />
 
     <v-card-text class="pa-2" style="flex: 1; min-height: 0; overflow: auto">
       <v-alert
