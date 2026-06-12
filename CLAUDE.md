@@ -31,20 +31,27 @@
 应用采用 **工具注册表** 模式组织导航和工具页面：
 
 - `src/types/tool.ts` — 定义 `ToolCategoryId`、`ToolStatus`、`ToolCategory`、`ToolDefinition` 等类型。
-- `src/tools/registry.ts` — 注册所有工具分类和工具定义。分类顺序即导航展示顺序。当前注册了 5 个工具，仅 JSON 格式化为 `"available"`，其余为 `"planned"`。
+- `src/tools/registry.ts` — 注册所有工具分类和工具定义。分类顺序即导航展示顺序。当前注册了 5 个工具，均为 `"available"`。
 - `src/layouts/AppShell.vue` — 主布局，持有 `currentToolId` 状态（无 Vue Router），通过 `v-if` 条件渲染对应工具页面。
 
 **新增工具的步骤**：
+
 1. 在 `src/tools/registry.ts` 的 `tools` 数组中添加 `ToolDefinition`。
-2. 在 `src/pages/<tool-id>/` 下创建页面组件。
-3. 在 `AppShell.vue` 的模板中添加对应的 `v-if` 分支。
+2. 在 `src/tools/<tool>/` 下创建纯函数工具层（类型 + 逻辑）。
+3. 在 `src/pages/<tool-id>/` 下创建页面组件。
+4. 在 `AppShell.vue` 中导入并添加对应的 `v-if` 分支。
+5. 运行 `npm run build` 验证类型，`npx prettier src/ --write` 格式化。
 
 ### 页面与组件
 
 - `src/layouts/AppShell.vue` — 主布局：左侧导航抽屉 + 顶部状态栏 + 工具内容区。
 - `src/components/` — 共享组件：`AppNavigation`（侧边栏）、`ToolStatusBar`（顶部栏）。
-- `src/pages/json-formatter/` — 唯一已实现的工具，双栏布局（输入 + JSON 树），支持格式化、压缩。文件：`index.vue`（布局 + 业务逻辑）、`InputPanel.vue`（输入面板）、`JsonTreePanel.vue`（树形结构面板）。
-- `src/tools/json/jsonFormatter.ts` — 纯函数：`validateJson`、`formatJson`、`minifyJson`、`getTextStats`。
+- `src/pages/json-formatter/` — JSON 格式化，双栏布局（输入 + JSON 树），支持格式化、压缩。子组件：`InputPanel.vue`、`JsonTreePanel.vue`。
+- `src/pages/yaml-formatter/` — YAML 格式化，与 JSON 格式化结构一致。依赖 `yaml` npm 包（`parse`/`stringify`）。子组件：`InputPanel.vue`、`YamlTreePanel.vue`。
+- `src/pages/base64-codec/index.vue` — Base64 编解码，左右分栏（输入 + 输出），支持交换。纯浏览器原生 API（`TextEncoder`/`btoa`/`atob`）。
+- `src/pages/timestamp-converter/index.vue` — 时间戳转换，自动识别秒/毫秒级时间戳与日期字符串，实时显示当前时钟。
+- `src/pages/regex-tester/index.vue` — 正则测试，左侧输入正则+测试文本，右侧实时高亮匹配结果和捕获组。
+- `src/tools/<tool>/` — 每个工具对应一个纯函数目录（`json/`、`yaml/`、`base64/`、`timestamp/`、`regex/`），包含类型定义和工具函数，无 Vue 依赖。
 
 ### Rust 后端
 
@@ -63,6 +70,8 @@
 ## Project notes
 
 - 项目已配置 Prettier，配置文件为空对象（`.prettierrc` 是 `{}`），并忽略 `build` 和 `coverage`。
+- 项目额外运行时依赖：`yaml`（YAML 解析/序列化）。
 - 主题系统使用 Vuetify 内置的 system/light/dark 模式，无自定义颜色。
 - 工具页面统一使用 `index.vue` 作为入口，左右面板各自独立为一个组件，被 index 引用。
 - 组件拆分原则：只被用一次且体量小的组件应内联到父组件，避免过度拆分。能用浏览器原生能力（如 Ctrl+F 搜索 textarea）的场景不要自定义实现。
+- `yaml` 包的 `stringify` 不支持 `flowLevel` 选项，只支持 `indent`、`lineWidth` 等基本选项。
