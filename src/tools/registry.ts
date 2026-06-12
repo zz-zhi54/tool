@@ -71,6 +71,14 @@ export const tools: ToolDefinition[] = [
     icon: "$search",
     status: "available",
   },
+  {
+    id: "sql-generator",
+    title: "SQL IN 生成器",
+    description: "将多行数据转换为 SQL IN 语句。",
+    category: "text",
+    icon: "$file",
+    status: "available",
+  },
 ];
 
 /**

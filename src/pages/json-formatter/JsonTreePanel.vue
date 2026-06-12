@@ -203,7 +203,7 @@ function collectExpandableIds(nodes: JsonTreeNode[]): string[] {
     class="d-flex flex-column"
     flat
     height="100%"
-    style="min-height: 0"
+    style="min-height: 0; overflow: hidden"
   >
     <v-card-title
       class="d-flex align-center text-body-2 font-weight-medium px-2 py-1"

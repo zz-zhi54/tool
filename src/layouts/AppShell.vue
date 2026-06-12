@@ -6,6 +6,7 @@ import ToolStatusBar from "../components/ToolStatusBar.vue";
 import Base64CodecView from "../pages/base64-codec/index.vue";
 import JsonFormatterView from "../pages/json-formatter/index.vue";
 import RegexTesterView from "../pages/regex-tester/index.vue";
+import SqlGeneratorView from "../pages/sql-generator/index.vue";
 import TimestampConverterView from "../pages/timestamp-converter/index.vue";
 import YamlFormatterView from "../pages/yaml-formatter/index.vue";
 import { defaultToolId, findToolById } from "../tools/registry";
@@ -66,6 +67,7 @@ function selectTool(toolId: string) {
           v-if="currentToolId === 'timestamp-converter'"
         />
         <RegexTesterView v-if="currentToolId === 'regex-tester'" />
+        <SqlGeneratorView v-if="currentToolId === 'sql-generator'" />
       </v-container>
     </v-main>
   </v-app>

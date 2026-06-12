@@ -10,9 +10,10 @@ import {
   minifyJson,
   validateJson,
 } from "../../tools/json/jsonFormatter";
+import { STORAGE_KEYS, getStorage, setStorage } from "../../utils/storage";
 
 const input = ref("");
-const inputPanelPercent = ref(60);
+const inputPanelPercent = ref(getStorage(STORAGE_KEYS.JSON_FORMATTER_PANEL_PERCENT));
 const isResizing = ref(false);
 const workspaceRef = ref<HTMLElement | null>(null);
 const snackbar = ref(false);
@@ -152,28 +153,30 @@ function handleResize(event: PointerEvent) {
 }
 
 /**
- * 结束拖拽并清理全局事件。
+ * 结束拖拽，保存面板比例到 localStorage 并清理全局事件。
  */
 function stopResize() {
   isResizing.value = false;
+  setStorage(STORAGE_KEYS.JSON_FORMATTER_PANEL_PERCENT, inputPanelPercent.value);
   window.removeEventListener("pointermove", handleResize);
   window.removeEventListener("pointerup", stopResize);
 }
 
 /**
- * 键盘调整分割条。
+ * 键盘调整分割条，调整后保存到 localStorage。
  *
  * 让分割条在获得焦点后也可以用左右方向键微调，符合桌面工具的可访问性预期。
  */
 function resizeBy(delta: number) {
   inputPanelPercent.value = clampPanelPercent(inputPanelPercent.value + delta);
+  setStorage(STORAGE_KEYS.JSON_FORMATTER_PANEL_PERCENT, inputPanelPercent.value);
 }
 
 /**
  * 限制左右面板比例范围。
  */
 function clampPanelPercent(value: number) {
-  return Math.min(75, Math.max(35, value));
+  return Math.min(85, Math.max(15, value));
 }
 
 /**
