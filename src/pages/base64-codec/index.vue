@@ -1,11 +1,14 @@
 <script setup lang="ts">
 import { computed, ref } from "vue";
 
+import PanelCard from "../../components/PanelCard.vue";
+import SplitPanel from "../../components/SplitPanel.vue";
 import {
   decodeBase64,
   encodeBase64,
   validateBase64,
 } from "../../tools/base64/base64Codec";
+import { STORAGE_KEYS } from "../../utils/storage";
 
 const input = ref("");
 const output = ref("");
@@ -196,29 +199,10 @@ function showMessage(message: string) {
       </div>
     </v-toolbar>
 
-    <!-- 工作区：左右面板各占 50% -->
-    <div
-      class="d-flex ga-2"
-      style="flex: 1 1 auto; min-height: 0; overflow: hidden"
-    >
-      <!-- 输入面板 -->
-      <v-card
-        border="sm"
-        class="d-flex flex-column"
-        flat
-        style="flex: 1; min-width: 0; min-height: 0; overflow: hidden"
-      >
-        <v-card-title
-          class="d-flex align-center text-body-2 font-weight-medium px-2 py-1"
-        >
-          <v-icon class="mr-1" icon="$file" size="small" />
-          输入文本
-        </v-card-title>
-        <v-divider />
-        <v-card-text
-          class="pa-2"
-          style="flex: 1; min-height: 0; overflow: hidden"
-        >
+    <!-- 工作区：左右面板比例持久化到 localStorage -->
+    <SplitPanel :storage-key="STORAGE_KEYS.BASE64_CODEC_PANEL_PERCENT.key">
+      <template #left>
+        <PanelCard icon="$file" title="输入文本">
           <textarea
             v-model="input"
             placeholder="输入需要编码的文本，或粘贴 Base64 字符串进行解码"
@@ -235,27 +219,11 @@ function showMessage(message: string) {
               color: inherit;
             "
           />
-        </v-card-text>
-      </v-card>
+        </PanelCard>
+      </template>
 
-      <!-- 输出面板 -->
-      <v-card
-        border="sm"
-        class="d-flex flex-column"
-        flat
-        style="flex: 1; min-width: 0; min-height: 0; overflow: hidden"
-      >
-        <v-card-title
-          class="d-flex align-center text-body-2 font-weight-medium px-2 py-1"
-        >
-          <v-icon class="mr-1" icon="$next" size="small" />
-          输出结果
-        </v-card-title>
-        <v-divider />
-        <v-card-text
-          class="pa-2"
-          style="flex: 1; min-height: 0; overflow: hidden"
-        >
+      <template #right>
+        <PanelCard icon="$next" title="输出结果">
           <textarea
             :value="output"
             readonly
@@ -273,9 +241,9 @@ function showMessage(message: string) {
               color: inherit;
             "
           />
-        </v-card-text>
-      </v-card>
-    </div>
+        </PanelCard>
+      </template>
+    </SplitPanel>
 
     <v-snackbar v-model="snackbar" timeout="2000">
       {{ snackbarText }}

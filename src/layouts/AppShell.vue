@@ -6,6 +6,7 @@ import ToolStatusBar from "../components/ToolStatusBar.vue";
 import Base64CodecView from "../pages/base64-codec/index.vue";
 import JsonFormatterView from "../pages/json-formatter/index.vue";
 import RegexTesterView from "../pages/regex-tester/index.vue";
+import SettingsView from "../pages/settings/index.vue";
 import SqlGeneratorView from "../pages/sql-generator/index.vue";
 import TimestampConverterView from "../pages/timestamp-converter/index.vue";
 import YamlFormatterView from "../pages/yaml-formatter/index.vue";
@@ -28,9 +29,21 @@ const currentToolId = ref(defaultToolId);
 /**
  * 当前工具定义。
  *
- * 这里保留兜底逻辑，避免注册表调整时出现空对象导致页面渲染失败。
+ * 设置页面使用 __settings 哨兵 ID，需单独构造虚拟定义用于状态栏展示。
+ * 其他 ID 从注册表查找，保留兜底逻辑避免空对象导致渲染失败。
  */
 const currentTool = computed(() => {
+  if (currentToolId.value === "__settings") {
+    return {
+      id: "__settings",
+      title: "设置",
+      description: "应用偏好设置",
+      category: "data-format" as const,
+      icon: "$settings",
+      status: "available" as const,
+    };
+  }
+
   return findToolById(currentToolId.value) ?? findToolById(defaultToolId)!;
 });
 
@@ -46,7 +59,7 @@ function selectTool(toolId: string) {
 
 <template>
   <v-app>
-    <v-navigation-drawer v-model="drawer" width="248">
+    <v-navigation-drawer v-model="drawer" border="r" rounded="lg" width="248">
       <AppNavigation
         :current-tool-id="currentToolId"
         @select-tool="selectTool"
@@ -68,6 +81,7 @@ function selectTool(toolId: string) {
         />
         <RegexTesterView v-if="currentToolId === 'regex-tester'" />
         <SqlGeneratorView v-if="currentToolId === 'sql-generator'" />
+        <SettingsView v-if="currentToolId === '__settings'" />
       </v-container>
     </v-main>
   </v-app>

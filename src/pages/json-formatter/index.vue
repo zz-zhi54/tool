@@ -1,8 +1,9 @@
 <script setup lang="ts">
-import { computed, onBeforeUnmount, ref } from "vue";
+import { computed, ref } from "vue";
 
 import InputPanel from "./InputPanel.vue";
 import JsonTreePanel from "./JsonTreePanel.vue";
+import SplitPanel from "../../components/SplitPanel.vue";
 import type { JsonValue } from "../../tools/json/jsonTypes";
 import {
   formatJson,
@@ -10,12 +11,9 @@ import {
   minifyJson,
   validateJson,
 } from "../../tools/json/jsonFormatter";
-import { STORAGE_KEYS, getStorage, setStorage } from "../../utils/storage";
+import { STORAGE_KEYS } from "../../utils/storage";
 
 const input = ref("");
-const inputPanelPercent = ref(getStorage(STORAGE_KEYS.JSON_FORMATTER_PANEL_PERCENT));
-const isResizing = ref(false);
-const workspaceRef = ref<HTMLElement | null>(null);
 const snackbar = ref(false);
 const snackbarText = ref("");
 
@@ -48,22 +46,6 @@ const parsedValue = computed<JsonValue | undefined>(() => {
 });
 
 const hasInput = computed(() => input.value.trim().length > 0);
-
-/**
- * 输入面板宽度样式。
- *
- * 桌面端通过拖拽分割条调整左右面板比例；小窗口下会由 CSS 回退为上下布局。
- */
-const inputPaneStyle = computed(() => ({
-  flexBasis: `${inputPanelPercent.value}%`,
-}));
-
-/**
- * 结构视图区域宽度样式。
- */
-const detailPaneStyle = computed(() => ({
-  flexBasis: `${100 - inputPanelPercent.value}%`,
-}));
 
 /**
  * 在输入框内格式化当前 JSON。
@@ -125,61 +107,6 @@ function handleClear() {
 }
 
 /**
- * 开始拖拽左右面板分割条。
- *
- * 鼠标移动时根据指针在工作区中的横向位置计算输入区占比。
- */
-function startResize(event: PointerEvent) {
-  isResizing.value = true;
-  window.addEventListener("pointermove", handleResize);
-  window.addEventListener("pointerup", stopResize);
-  handleResize(event);
-}
-
-/**
- * 根据指针位置调整输入区宽度。
- *
- * 宽度限制在 35% - 75% 之间，避免任意一侧被压到不可用。
- */
-function handleResize(event: PointerEvent) {
-  const bounds = workspaceRef.value?.getBoundingClientRect();
-
-  if (!bounds) {
-    return;
-  }
-
-  const nextPercent = ((event.clientX - bounds.left) / bounds.width) * 100;
-  inputPanelPercent.value = clampPanelPercent(nextPercent);
-}
-
-/**
- * 结束拖拽，保存面板比例到 localStorage 并清理全局事件。
- */
-function stopResize() {
-  isResizing.value = false;
-  setStorage(STORAGE_KEYS.JSON_FORMATTER_PANEL_PERCENT, inputPanelPercent.value);
-  window.removeEventListener("pointermove", handleResize);
-  window.removeEventListener("pointerup", stopResize);
-}
-
-/**
- * 键盘调整分割条，调整后保存到 localStorage。
- *
- * 让分割条在获得焦点后也可以用左右方向键微调，符合桌面工具的可访问性预期。
- */
-function resizeBy(delta: number) {
-  inputPanelPercent.value = clampPanelPercent(inputPanelPercent.value + delta);
-  setStorage(STORAGE_KEYS.JSON_FORMATTER_PANEL_PERCENT, inputPanelPercent.value);
-}
-
-/**
- * 限制左右面板比例范围。
- */
-function clampPanelPercent(value: number) {
-  return Math.min(85, Math.max(15, value));
-}
-
-/**
  * 展示短提示。
  *
  * 操作结果统一通过 snackbar 反馈，避免在页面中堆叠临时状态文本。
@@ -188,8 +115,6 @@ function showMessage(message: string) {
   snackbarText.value = message;
   snackbar.value = true;
 }
-
-onBeforeUnmount(stopResize);
 </script>
 
 <template>
@@ -290,39 +215,17 @@ onBeforeUnmount(stopResize);
 
     <!--
       工作区：左右面板可拖拽调节大小。
-      ga-2 子元素间距；overflow:hidden 防止滚动溢出到外部。
+      storageKey 传入后 SplitPanel 自动持久化比例到 localStorage。
     -->
-    <div
-      ref="workspaceRef"
-      class="d-flex ga-2"
-      :style="{
-        flex: '1 1 auto',
-        minHeight: 0,
-        overflow: 'hidden',
-        userSelect: isResizing ? 'none' : undefined,
-      }"
-    >
-      <!-- 输入 JSON 面板 -->
-      <section style="min-width: 0; min-height: 0" :style="inputPaneStyle">
+    <SplitPanel :storage-key="STORAGE_KEYS.JSON_FORMATTER_PANEL_PERCENT.key">
+      <template #left>
         <InputPanel v-model="input" />
-      </section>
+      </template>
 
-      <!-- 拖拽分割条 -->
-      <v-sheet
-        aria-label="调整输入 JSON 和结构视图宽度"
-        role="separator"
-        style="width: 8px; cursor: col-resize; flex: 0 0 8px"
-        tabindex="0"
-        @keydown.left.prevent="resizeBy(-5)"
-        @keydown.right.prevent="resizeBy(5)"
-        @pointerdown.prevent="startResize"
-      />
-
-      <!-- 结构视图面板 -->
-      <section style="min-width: 0; min-height: 0" :style="detailPaneStyle">
+      <template #right>
         <JsonTreePanel :value="parsedValue" />
-      </section>
-    </div>
+      </template>
+    </SplitPanel>
 
     <v-snackbar v-model="snackbar" timeout="2000">
       {{ snackbarText }}

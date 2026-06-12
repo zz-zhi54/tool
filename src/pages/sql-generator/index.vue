@@ -1,7 +1,10 @@
 <script setup lang="ts">
 import { computed, ref } from "vue";
 
+import PanelCard from "../../components/PanelCard.vue";
+import SplitPanel from "../../components/SplitPanel.vue";
 import { generateSqlIn } from "../../tools/sql-in/sqlInGenerator";
+import { STORAGE_KEYS } from "../../utils/storage";
 
 const input = ref("");
 const output = ref("");
@@ -137,29 +140,10 @@ function showMessage(message: string) {
       </div>
     </v-toolbar>
 
-    <!-- 工作区：左右面板各占 50% -->
-    <div
-      class="d-flex ga-2"
-      style="flex: 1 1 auto; min-height: 0; overflow: hidden"
-    >
-      <!-- 输入面板 -->
-      <v-card
-        border="sm"
-        class="d-flex flex-column"
-        flat
-        style="flex: 1; min-width: 0; min-height: 0; overflow: hidden"
-      >
-        <v-card-title
-          class="d-flex align-center text-body-2 font-weight-medium px-2 py-1"
-        >
-          <v-icon class="mr-1" icon="$file" size="small" />
-          输入数据（每行一个值）
-        </v-card-title>
-        <v-divider />
-        <v-card-text
-          class="pa-2"
-          style="flex: 1; min-height: 0; overflow: hidden"
-        >
+    <!-- 工作区：左右面板比例持久化到 localStorage -->
+    <SplitPanel :storage-key="STORAGE_KEYS.SQL_GENERATOR_PANEL_PERCENT.key">
+      <template #left>
+        <PanelCard icon="$file" title="输入数据（每行一个值）">
           <textarea
             v-model="input"
             placeholder="粘贴数据，每行一个值，例如：&#10;OGZJAL25110009&#10;OCDS25110025&#10;OWSD25080005"
@@ -176,27 +160,11 @@ function showMessage(message: string) {
               color: inherit;
             "
           />
-        </v-card-text>
-      </v-card>
+        </PanelCard>
+      </template>
 
-      <!-- 输出面板 -->
-      <v-card
-        border="sm"
-        class="d-flex flex-column"
-        flat
-        style="flex: 1; min-width: 0; min-height: 0; overflow: hidden"
-      >
-        <v-card-title
-          class="d-flex align-center text-body-2 font-weight-medium px-2 py-1"
-        >
-          <v-icon class="mr-1" icon="$next" size="small" />
-          SQL IN 语句
-        </v-card-title>
-        <v-divider />
-        <v-card-text
-          class="pa-2"
-          style="flex: 1; min-height: 0; overflow: hidden"
-        >
+      <template #right>
+        <PanelCard icon="$next" title="SQL IN 语句">
           <textarea
             :value="output"
             readonly
@@ -214,9 +182,9 @@ function showMessage(message: string) {
               color: inherit;
             "
           />
-        </v-card-text>
-      </v-card>
-    </div>
+        </PanelCard>
+      </template>
+    </SplitPanel>
 
     <v-snackbar v-model="snackbar" timeout="2000">
       {{ snackbarText }}

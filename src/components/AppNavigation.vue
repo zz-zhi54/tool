@@ -40,19 +40,23 @@ function selectTool(tool: ToolDefinition) {
 </script>
 
 <template>
-  <v-list density="compact" nav slim>
-    <v-list-item
-      prepend-icon="$file"
-      subtitle="本地开发者小工具"
-      title="Tool Workbench"
-    />
-  </v-list>
+  <!--
+    单一连续列表：工具分类和系统设置在同一个 v-list 中展示，
+    通过 subheader 的 mt-4/mt-6 间距实现自然分组，不再使用 divider。
+  -->
+  <v-list density="compact" nav rounded="lg">
+    <!-- 应用头部 -->
+    <v-card class="mb-2" rounded="lg" variant="tonal">
+      <v-card-item
+        prepend-icon="$file"
+        subtitle="本地开发者小工具"
+        title="Tool Workbench"
+      />
+    </v-card>
 
-  <v-divider />
-
-  <v-list density="compact" nav slim>
+    <!-- 工具分类 -->
     <template v-for="group in groupedTools" :key="group.id">
-      <v-list-subheader class="text-caption" :title="group.title" />
+      <v-list-subheader class="mt-2" :title="group.title" />
 
       <v-list-item
         v-for="tool in group.tools"
@@ -62,6 +66,8 @@ function selectTool(tool: ToolDefinition) {
         :prepend-icon="tool.icon"
         :subtitle="tool.status === 'planned' ? '规划中' : undefined"
         :title="tool.title"
+        :variant="props.currentToolId === tool.id ? 'flat' : 'text'"
+        rounded="xl"
         @click="selectTool(tool)"
       >
         <template v-if="tool.status === 'planned'" #append>
@@ -71,5 +77,17 @@ function selectTool(tool: ToolDefinition) {
         </template>
       </v-list-item>
     </template>
+
+    <!-- 系统功能入口 -->
+    <v-divider class="my-2" inset />
+    <v-list-subheader title="系统" />
+    <v-list-item
+      :active="props.currentToolId === '__settings'"
+      :variant="props.currentToolId === '__settings' ? 'flat' : 'text'"
+      prepend-icon="$settings"
+      rounded="xl"
+      title="设置"
+      @click="emit('selectTool', '__settings')"
+    />
   </v-list>
 </template>

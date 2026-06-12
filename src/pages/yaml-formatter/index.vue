@@ -1,21 +1,19 @@
 <script setup lang="ts">
-import { computed, onBeforeUnmount, ref } from "vue";
+import { computed, ref } from "vue";
 import { parse } from "yaml";
 
 import InputPanel from "./InputPanel.vue";
 import YamlTreePanel from "./YamlTreePanel.vue";
+import SplitPanel from "../../components/SplitPanel.vue";
 import {
   formatYaml,
   getYamlTextStats,
   minifyYaml,
   validateYaml,
 } from "../../tools/yaml/yamlFormatter";
-import { STORAGE_KEYS, getStorage, setStorage } from "../../utils/storage";
+import { STORAGE_KEYS } from "../../utils/storage";
 
 const input = ref("");
-const inputPanelPercent = ref(getStorage(STORAGE_KEYS.YAML_FORMATTER_PANEL_PERCENT));
-const isResizing = ref(false);
-const workspaceRef = ref<HTMLElement | null>(null);
 const snackbar = ref(false);
 const snackbarText = ref("");
 
@@ -45,14 +43,6 @@ const parsedValue = computed<unknown | undefined>(() => {
 });
 
 const hasInput = computed(() => input.value.trim().length > 0);
-
-const inputPaneStyle = computed(() => ({
-  flexBasis: `${inputPanelPercent.value}%`,
-}));
-
-const detailPaneStyle = computed(() => ({
-  flexBasis: `${100 - inputPanelPercent.value}%`,
-}));
 
 /**
  * 格式化当前 YAML。
@@ -106,58 +96,10 @@ function handleClear() {
   showMessage("已清空输入");
 }
 
-/**
- * 开始拖拽左右面板分割条。
- */
-function startResize(event: PointerEvent) {
-  isResizing.value = true;
-  window.addEventListener("pointermove", handleResize);
-  window.addEventListener("pointerup", stopResize);
-  handleResize(event);
-}
-
-/**
- * 根据指针位置调整输入区宽度。
- */
-function handleResize(event: PointerEvent) {
-  const bounds = workspaceRef.value?.getBoundingClientRect();
-
-  if (!bounds) {
-    return;
-  }
-
-  const nextPercent = ((event.clientX - bounds.left) / bounds.width) * 100;
-  inputPanelPercent.value = clampPanelPercent(nextPercent);
-}
-
-/**
- * 结束拖拽，保存面板比例到 localStorage 并清理全局事件。
- */
-function stopResize() {
-  isResizing.value = false;
-  setStorage(STORAGE_KEYS.YAML_FORMATTER_PANEL_PERCENT, inputPanelPercent.value);
-  window.removeEventListener("pointermove", handleResize);
-  window.removeEventListener("pointerup", stopResize);
-}
-
-/**
- * 键盘调整分割条，调整后保存到 localStorage。
- */
-function resizeBy(delta: number) {
-  inputPanelPercent.value = clampPanelPercent(inputPanelPercent.value + delta);
-  setStorage(STORAGE_KEYS.YAML_FORMATTER_PANEL_PERCENT, inputPanelPercent.value);
-}
-
-function clampPanelPercent(value: number) {
-  return Math.min(85, Math.max(15, value));
-}
-
 function showMessage(message: string) {
   snackbarText.value = message;
   snackbar.value = true;
 }
-
-onBeforeUnmount(stopResize);
 </script>
 
 <template>
@@ -251,34 +193,15 @@ onBeforeUnmount(stopResize);
     </v-toolbar>
 
     <!-- 工作区：左右面板可拖拽调节大小 -->
-    <div
-      ref="workspaceRef"
-      class="d-flex ga-2"
-      :style="{
-        flex: '1 1 auto',
-        minHeight: 0,
-        overflow: 'hidden',
-        userSelect: isResizing ? 'none' : undefined,
-      }"
-    >
-      <section style="min-width: 0; min-height: 0" :style="inputPaneStyle">
+    <SplitPanel :storage-key="STORAGE_KEYS.YAML_FORMATTER_PANEL_PERCENT.key">
+      <template #left>
         <InputPanel v-model="input" />
-      </section>
+      </template>
 
-      <v-sheet
-        aria-label="调整输入 YAML 和结构视图宽度"
-        role="separator"
-        style="width: 8px; cursor: col-resize; flex: 0 0 8px"
-        tabindex="0"
-        @keydown.left.prevent="resizeBy(-5)"
-        @keydown.right.prevent="resizeBy(5)"
-        @pointerdown.prevent="startResize"
-      />
-
-      <section style="min-width: 0; min-height: 0" :style="detailPaneStyle">
+      <template #right>
         <YamlTreePanel :value="parsedValue" />
-      </section>
-    </div>
+      </template>
+    </SplitPanel>
 
     <v-snackbar v-model="snackbar" timeout="2000">
       {{ snackbarText }}

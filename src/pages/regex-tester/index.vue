@@ -1,7 +1,10 @@
 <script setup lang="ts">
 import { computed, ref } from "vue";
 
+import PanelCard from "../../components/PanelCard.vue";
+import SplitPanel from "../../components/SplitPanel.vue";
 import { testRegex, validateRegex } from "../../tools/regex/regexTester";
+import { STORAGE_KEYS } from "../../utils/storage";
 
 const pattern = ref("");
 const testString = ref("");
@@ -245,29 +248,10 @@ function showMessage(message: string) {
       </v-alert>
     </v-card>
 
-    <!-- 工作区：左侧测试文本 + 右侧匹配结果 -->
-    <div
-      class="d-flex ga-2"
-      style="flex: 1 1 auto; min-height: 0; overflow: hidden"
-    >
-      <!-- 左侧：测试字符串输入 -->
-      <v-card
-        border="sm"
-        class="d-flex flex-column"
-        flat
-        style="flex: 1; min-width: 0; min-height: 0; overflow: hidden"
-      >
-        <v-card-title
-          class="d-flex align-center text-body-2 font-weight-medium px-2 py-1"
-        >
-          <v-icon class="mr-1" icon="$file" size="small" />
-          测试字符串
-        </v-card-title>
-        <v-divider />
-        <v-card-text
-          class="pa-2"
-          style="flex: 1; min-height: 0; overflow: hidden"
-        >
+    <!-- 工作区：左侧测试文本 + 右侧匹配结果，比例持久化到 localStorage -->
+    <SplitPanel :storage-key="STORAGE_KEYS.REGEX_TESTER_PANEL_PERCENT.key">
+      <template #left>
+        <PanelCard icon="$file" title="测试字符串">
           <textarea
             v-model="testString"
             placeholder="输入需要测试的文本"
@@ -284,25 +268,11 @@ function showMessage(message: string) {
               color: inherit;
             "
           />
-        </v-card-text>
-      </v-card>
+        </PanelCard>
+      </template>
 
-      <!-- 右侧：匹配结果 + 高亮预览 -->
-      <v-card
-        border="sm"
-        class="d-flex flex-column"
-        flat
-        style="flex: 1; min-width: 0; min-height: 0; overflow: hidden"
-      >
-        <v-card-title
-          class="d-flex align-center text-body-2 font-weight-medium px-2 py-1"
-        >
-          <v-icon class="mr-1" icon="$search" size="small" />
-          匹配结果
-        </v-card-title>
-        <v-divider />
-
-        <div class="pa-2" style="flex: 1; min-height: 0; overflow: auto">
+      <template #right>
+        <PanelCard icon="$search" overflow="auto" title="匹配结果">
           <!-- 高亮预览 -->
           <v-card
             v-if="hasTestString"
@@ -383,9 +353,9 @@ function showMessage(message: string) {
           >
             输入正则表达式和测试字符串，结果会实时显示。
           </v-alert>
-        </div>
-      </v-card>
-    </div>
+        </PanelCard>
+      </template>
+    </SplitPanel>
 
     <v-snackbar v-model="snackbar" timeout="2000">
       {{ snackbarText }}
