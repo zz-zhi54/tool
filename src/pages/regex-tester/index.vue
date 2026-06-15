@@ -4,13 +4,13 @@ import { computed, ref, watch } from "vue";
 import PanelCard from "../../components/PanelCard.vue";
 import SplitPanel from "../../components/SplitPanel.vue";
 import { testRegex, validateRegex } from "../../tools/regex/regexTester";
-import { getStorage, setStorage, STORAGE_KEYS } from "../../utils/storage";
+import { load, save, REGEX_FLAGS_KEY, PANEL_KEYS } from "../../utils/storage";
 import type { RegexFlag, RegexFlagsPreference } from "../../utils/storage";
 
 const pattern = ref("");
 const testString = ref("");
 const flags = ref<RegexFlagsPreference>(
-  getStorage(STORAGE_KEYS.REGEX_TESTER_FLAGS),
+  load(REGEX_FLAGS_KEY, { g: true, i: false, m: false, s: false, u: false }),
 );
 const snackbar = ref(false);
 const snackbarText = ref("");
@@ -37,7 +37,7 @@ const activeFlags = computed(() =>
 watch(
   flags,
   (value) => {
-    setStorage(STORAGE_KEYS.REGEX_TESTER_FLAGS, { ...value });
+    save(REGEX_FLAGS_KEY, { ...value });
   },
   { deep: true },
 );
@@ -256,7 +256,7 @@ function showMessage(message: string) {
     </v-card>
 
     <!-- 工作区：左侧测试文本 + 右侧匹配结果，比例持久化到 localStorage -->
-    <SplitPanel :storage-item="STORAGE_KEYS.REGEX_TESTER_PANEL_PERCENT">
+    <SplitPanel :panel-key="PANEL_KEYS.regexTester">
       <template #left>
         <PanelCard icon="$file" title="测试字符串">
           <textarea

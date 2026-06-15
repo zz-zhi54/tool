@@ -2,135 +2,74 @@
 import { computed, ref } from "vue";
 
 import {
-  getAllStorageItems,
-  resetStorage,
-  setStorage,
-  STORAGE_GROUPS,
-  STORAGE_KEYS,
+  getSettings,
+  remove,
+  save,
+  SETTING_GROUPS,
+  SETTINGS,
 } from "../../utils/storage";
 import type {
   RegexFlag,
   RegexFlagsPreference,
   SqlQuoteStyle,
-  StorageItem,
-  StorageItemMeta,
-  StorageItemName,
+  SettingSnapshot,
 } from "../../utils/storage";
 
 const snackbar = ref(false);
 const snackbarText = ref("");
 
-/**
- * 所有存储项的响应式列表。
- *
- * 每次修改后通过 refresh() 重新读取，保证 UI 与 localStorage 同步。
- */
-const storageItems = ref<StorageItemMeta[]>(getAllStorageItems());
+const items = ref<SettingSnapshot[]>(getSettings());
 
-const groupedItems = computed(() =>
-  STORAGE_GROUPS.map((group) => ({
-    ...group,
-    items: storageItems.value.filter((item) => item.group === group.id),
-  })).filter((group) => group.items.length > 0),
+const grouped = computed(() =>
+  SETTING_GROUPS.map((g) => ({
+    ...g,
+    items: items.value.filter((item) => item.group === g.id),
+  })).filter((g) => g.items.length > 0),
 );
 
-/** 刷新存储项列表 */
 function refresh() {
-  storageItems.value = getAllStorageItems();
+  items.value = getSettings();
 }
 
-/**
- * 根据存储项常量名获取 STORAGE_KEYS 中的定义。
- */
-function getStorageItem(name: StorageItemName): StorageItem<unknown> {
-  return STORAGE_KEYS[name] as unknown as StorageItem<unknown>;
+function getSnapshot(key: string): SettingSnapshot {
+  return items.value.find((item) => item.key === key)!;
 }
 
-function getSliderValue(item: StorageItemMeta): number {
-  return typeof item.value === "number"
-    ? item.value
-    : Number(item.defaultValue);
-}
+// ── handlers ────────────────────────────────────────
 
-function getToggleValue(item: StorageItemMeta): string {
-  return typeof item.value === "string"
-    ? item.value
-    : String(item.defaultValue);
-}
-
-function getFlagsValue(item: StorageItemMeta): RegexFlagsPreference {
-  return item.value as RegexFlagsPreference;
-}
-
-/**
- * 滑块值变更时持久化到 localStorage。
- */
-function handleSliderChange(name: StorageItemName, value: number) {
-  const item = getStorageItem(name);
-
-  if (item.control.type !== "slider") {
-    return;
-  }
-
-  setStorage(item, value);
+function onSlider(key: string, value: number) {
+  save(key, value);
   refresh();
 }
 
-function handleToggleChange(name: StorageItemName, value: string) {
-  const item = getStorageItem(name);
-
-  if (item.control.type !== "toggle") {
-    return;
-  }
-
-  setStorage(item, value as SqlQuoteStyle);
+function onToggle(key: string, value: string) {
+  save(key, value as SqlQuoteStyle);
   refresh();
 }
 
-function handleCheckboxChange(
-  name: StorageItemName,
-  flag: string,
-  checked: boolean | null,
-) {
-  const item = getStorageItem(name);
-
-  if (item.control.type !== "checkboxes") {
-    return;
-  }
-
-  const current = getFlagsValue(
-    storageItems.value.find((storageItem) => storageItem.name === name)!,
-  );
-
-  setStorage(item, {
-    ...current,
+function onCheckbox(key: string, flag: string, checked: boolean | null) {
+  const snap = getSnapshot(key);
+  save(key, {
+    ...(snap.value as RegexFlagsPreference),
     [flag as RegexFlag]: Boolean(checked),
   });
   refresh();
 }
 
-/**
- * 重置单个存储项为默认值。
- */
-function handleResetItem(item: StorageItemMeta) {
-  resetStorage(getStorageItem(item.name));
+function resetItem(snap: SettingSnapshot) {
+  remove(snap.key);
   refresh();
-  showMessage(`${item.label} 已重置为默认值`);
+  showMessage(`${snap.label} 已重置为默认值`);
 }
 
-/**
- * 重置所有存储项为默认值。
- */
-function handleResetAll() {
-  for (const name of Object.keys(STORAGE_KEYS) as StorageItemName[]) {
-    resetStorage(getStorageItem(name));
-  }
+function resetAll() {
+  for (const meta of SETTINGS) remove(meta.key);
   refresh();
   showMessage("所有设置已重置为默认值");
 }
 
-function showMessage(message: string) {
-  snackbarText.value = message;
+function showMessage(msg: string) {
+  snackbarText.value = msg;
   snackbar.value = true;
 }
 </script>
@@ -140,14 +79,11 @@ function showMessage(message: string) {
     class="d-flex flex-column ga-2 h-100"
     style="min-height: 0; overflow: hidden"
   >
-    <!-- 顶部工具栏 -->
     <v-toolbar border density="compact" flat rounded style="flex: 0 0 auto">
-      <v-toolbar-title class="text-body-2 font-weight-medium">
-        设置
-      </v-toolbar-title>
-
+      <v-toolbar-title class="text-body-2 font-weight-medium"
+        >设置</v-toolbar-title
+      >
       <v-spacer />
-
       <v-btn
         color="warning"
         density="compact"
@@ -155,86 +91,78 @@ function showMessage(message: string) {
         size="small"
         text="重置全部"
         variant="text"
-        @click="handleResetAll"
+        @click="resetAll"
       />
     </v-toolbar>
 
-    <!-- 可滚动内容区 -->
     <div
       class="d-flex flex-column ga-3"
       style="flex: 1 1 auto; min-height: 0; overflow: auto"
     >
-      <v-card v-for="group in groupedItems" :key="group.id" border flat rounded>
+      <v-card v-for="group in grouped" :key="group.id" border flat rounded>
         <v-card-item :subtitle="group.description" :title="group.title" />
-
         <v-divider />
-
         <v-card-text class="d-flex flex-column ga-4">
           <div
-            v-for="item in group.items"
-            :key="item.name"
+            v-for="snap in group.items"
+            :key="snap.key"
             class="d-flex align-center ga-3 flex-wrap"
           >
             <!-- 标签 -->
             <div style="min-width: 150px; flex: 0 0 150px">
-              <div class="text-body-2 font-weight-medium">
-                {{ item.label }}
-              </div>
+              <div class="text-body-2 font-weight-medium">{{ snap.label }}</div>
               <div
-                v-if="item.description"
+                v-if="snap.description"
                 class="text-caption text-medium-emphasis"
               >
-                {{ item.description }}
+                {{ snap.description }}
               </div>
             </div>
 
             <!-- 控件 -->
             <div style="min-width: 220px; flex: 1 1 260px">
               <v-slider
-                v-if="item.control.type === 'slider'"
-                :model-value="getSliderValue(item)"
-                :min="item.control.min"
-                :max="item.control.max"
-                :step="item.control.step"
+                v-if="snap.control.type === 'slider'"
+                :model-value="snap.value as number"
+                :min="snap.control.min"
+                :max="snap.control.max"
+                :step="snap.control.step"
                 density="compact"
                 hide-details
                 thumb-label
-                @update:model-value="
-                  (value: number) => handleSliderChange(item.name, value)
-                "
+                @update:model-value="(v: number) => onSlider(snap.key, v)"
               />
 
               <v-btn-toggle
-                v-else-if="item.control.type === 'toggle'"
-                :model-value="getToggleValue(item)"
+                v-else-if="snap.control.type === 'toggle'"
+                :model-value="snap.value as string"
                 density="compact"
                 mandatory
                 variant="outlined"
-                @update:model-value="
-                  (value: string) => handleToggleChange(item.name, value)
-                "
+                @update:model-value="(v: string) => onToggle(snap.key, v)"
               >
                 <v-btn
-                  v-for="option in item.control.options"
-                  :key="option.value"
+                  v-for="opt in snap.control.options"
+                  :key="opt.value"
                   size="small"
-                  :text="option.title"
-                  :value="option.value"
+                  :text="opt.title"
+                  :value="opt.value"
                 />
               </v-btn-toggle>
 
               <div v-else class="d-flex ga-2 flex-wrap">
                 <v-checkbox-btn
-                  v-for="option in item.control.options"
-                  :key="option.value"
-                  :model-value="getFlagsValue(item)[option.value as RegexFlag]"
-                  :label="option.title"
-                  :title="option.description"
+                  v-for="opt in snap.control.options"
+                  :key="opt.value"
+                  :model-value="
+                    (snap.value as RegexFlagsPreference)[opt.value as RegexFlag]
+                  "
+                  :label="opt.title"
+                  :title="opt.description"
                   density="compact"
                   hide-details
                   @update:model-value="
-                    (value: boolean | null) =>
-                      handleCheckboxChange(item.name, option.value, value)
+                    (v: boolean | null) => onCheckbox(snap.key, opt.value, v)
                   "
                 />
               </div>
@@ -243,13 +171,13 @@ function showMessage(message: string) {
             <!-- 当前值/默认值 -->
             <div class="d-flex align-center ga-1" style="flex: 0 0 auto">
               <v-chip color="primary" label size="x-small" variant="tonal">
-                当前：{{ item.displayValue }}
+                当前：{{ snap.display }}
               </v-chip>
               <v-chip label size="x-small" variant="outlined">
-                默认：{{ item.displayDefaultValue }}
+                默认：{{ snap.defaultDisplay }}
               </v-chip>
               <v-chip
-                v-if="!item.isDefault"
+                v-if="!snap.isDefault"
                 color="warning"
                 label
                 size="x-small"
@@ -259,22 +187,21 @@ function showMessage(message: string) {
               </v-chip>
             </div>
 
-            <!-- 单项重置按钮 -->
             <v-btn
-              :disabled="item.isDefault"
+              :disabled="snap.isDefault"
               density="compact"
               icon="$refresh"
               size="x-small"
               variant="text"
-              @click="handleResetItem(item)"
+              @click="resetItem(snap)"
             />
           </div>
         </v-card-text>
       </v-card>
     </div>
 
-    <v-snackbar v-model="snackbar" timeout="2000">
-      {{ snackbarText }}
-    </v-snackbar>
+    <v-snackbar v-model="snackbar" timeout="2000">{{
+      snackbarText
+    }}</v-snackbar>
   </div>
 </template>

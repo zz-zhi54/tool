@@ -8,7 +8,7 @@ import {
   encodeBase64,
   validateBase64,
 } from "../../tools/base64/base64Codec";
-import { STORAGE_KEYS } from "../../utils/storage";
+import { PANEL_KEYS } from "../../utils/storage";
 
 const input = ref("");
 const output = ref("");
@@ -200,7 +200,7 @@ function showMessage(message: string) {
     </v-toolbar>
 
     <!-- 工作区：左右面板比例持久化到 localStorage -->
-    <SplitPanel :storage-item="STORAGE_KEYS.BASE64_CODEC_PANEL_PERCENT">
+    <SplitPanel :panel-key="PANEL_KEYS.base64Codec">
       <template #left>
         <PanelCard icon="$file" title="输入文本">
           <textarea

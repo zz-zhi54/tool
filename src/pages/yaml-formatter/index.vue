@@ -11,7 +11,7 @@ import {
   minifyYaml,
   validateYaml,
 } from "../../tools/yaml/yamlFormatter";
-import { STORAGE_KEYS } from "../../utils/storage";
+import { PANEL_KEYS } from "../../utils/storage";
 
 const input = ref("");
 const snackbar = ref(false);
@@ -193,7 +193,7 @@ function showMessage(message: string) {
     </v-toolbar>
 
     <!-- 工作区：左右面板可拖拽调节大小 -->
-    <SplitPanel :storage-item="STORAGE_KEYS.YAML_FORMATTER_PANEL_PERCENT">
+    <SplitPanel :panel-key="PANEL_KEYS.yamlFormatter">
       <template #left>
         <InputPanel v-model="input" />
       </template>

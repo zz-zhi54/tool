@@ -11,7 +11,7 @@ import {
   minifyJson,
   validateJson,
 } from "../../tools/json/jsonFormatter";
-import { STORAGE_KEYS } from "../../utils/storage";
+import { PANEL_KEYS } from "../../utils/storage";
 
 const input = ref("");
 const snackbar = ref(false);
@@ -217,7 +217,7 @@ function showMessage(message: string) {
       工作区：左右面板可拖拽调节大小。
       storageItem 传入后 SplitPanel 自动持久化比例到 localStorage。
     -->
-    <SplitPanel :storage-item="STORAGE_KEYS.JSON_FORMATTER_PANEL_PERCENT">
+    <SplitPanel :panel-key="PANEL_KEYS.jsonFormatter">
       <template #left>
         <InputPanel v-model="input" />
       </template>

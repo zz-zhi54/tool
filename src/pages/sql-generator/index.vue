@@ -4,20 +4,20 @@ import { computed, ref, watch } from "vue";
 import PanelCard from "../../components/PanelCard.vue";
 import SplitPanel from "../../components/SplitPanel.vue";
 import { generateSqlIn } from "../../tools/sql-in/sqlInGenerator";
-import { getStorage, setStorage, STORAGE_KEYS } from "../../utils/storage";
+import { load, save, SQL_QUOTE_KEY, PANEL_KEYS } from "../../utils/storage";
 import type { SqlQuoteStyle } from "../../utils/storage";
 
 const input = ref("");
 const output = ref("");
 const snackbar = ref(false);
 const snackbarText = ref("");
-const quote = ref<SqlQuoteStyle>(getStorage(STORAGE_KEYS.SQL_GENERATOR_QUOTE));
+const quote = ref<SqlQuoteStyle>(load(SQL_QUOTE_KEY, '"'));
 
 const hasInput = computed(() => input.value.trim().length > 0);
 const hasOutput = computed(() => output.value.length > 0);
 
 watch(quote, (value) => {
-  setStorage(STORAGE_KEYS.SQL_GENERATOR_QUOTE, value);
+  save(SQL_QUOTE_KEY, value);
 
   if (hasInput.value && hasOutput.value) {
     output.value = generateSqlIn(input.value, value).sql;
@@ -150,7 +150,7 @@ function showMessage(message: string) {
     </v-toolbar>
 
     <!-- 工作区：左右面板比例持久化到 localStorage -->
-    <SplitPanel :storage-item="STORAGE_KEYS.SQL_GENERATOR_PANEL_PERCENT">
+    <SplitPanel :panel-key="PANEL_KEYS.sqlGenerator">
       <template #left>
         <PanelCard icon="$file" title="输入数据（每行一个值）">
           <textarea
