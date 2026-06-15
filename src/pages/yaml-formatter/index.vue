@@ -193,7 +193,7 @@ function showMessage(message: string) {
     </v-toolbar>
 
     <!-- 工作区：左右面板可拖拽调节大小 -->
-    <SplitPanel :storage-key="STORAGE_KEYS.YAML_FORMATTER_PANEL_PERCENT.key">
+    <SplitPanel :storage-item="STORAGE_KEYS.YAML_FORMATTER_PANEL_PERCENT">
       <template #left>
         <InputPanel v-model="input" />
       </template>

@@ -1,19 +1,28 @@
 <script setup lang="ts">
-import { computed, ref } from "vue";
+import { computed, ref, watch } from "vue";
 
 import PanelCard from "../../components/PanelCard.vue";
 import SplitPanel from "../../components/SplitPanel.vue";
 import { generateSqlIn } from "../../tools/sql-in/sqlInGenerator";
-import { STORAGE_KEYS } from "../../utils/storage";
+import { getStorage, setStorage, STORAGE_KEYS } from "../../utils/storage";
+import type { SqlQuoteStyle } from "../../utils/storage";
 
 const input = ref("");
 const output = ref("");
 const snackbar = ref(false);
 const snackbarText = ref("");
-const quote = ref<'"' | "'">('"');
+const quote = ref<SqlQuoteStyle>(getStorage(STORAGE_KEYS.SQL_GENERATOR_QUOTE));
 
 const hasInput = computed(() => input.value.trim().length > 0);
 const hasOutput = computed(() => output.value.length > 0);
+
+watch(quote, (value) => {
+  setStorage(STORAGE_KEYS.SQL_GENERATOR_QUOTE, value);
+
+  if (hasInput.value && hasOutput.value) {
+    output.value = generateSqlIn(input.value, value).sql;
+  }
+});
 
 /**
  * 统计输入的有效行数（非空行）。
@@ -141,7 +150,7 @@ function showMessage(message: string) {
     </v-toolbar>
 
     <!-- 工作区：左右面板比例持久化到 localStorage -->
-    <SplitPanel :storage-key="STORAGE_KEYS.SQL_GENERATOR_PANEL_PERCENT.key">
+    <SplitPanel :storage-item="STORAGE_KEYS.SQL_GENERATOR_PANEL_PERCENT">
       <template #left>
         <PanelCard icon="$file" title="输入数据（每行一个值）">
           <textarea

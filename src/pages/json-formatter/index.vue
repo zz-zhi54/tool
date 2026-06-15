@@ -215,9 +215,9 @@ function showMessage(message: string) {
 
     <!--
       工作区：左右面板可拖拽调节大小。
-      storageKey 传入后 SplitPanel 自动持久化比例到 localStorage。
+      storageItem 传入后 SplitPanel 自动持久化比例到 localStorage。
     -->
-    <SplitPanel :storage-key="STORAGE_KEYS.JSON_FORMATTER_PANEL_PERCENT.key">
+    <SplitPanel :storage-item="STORAGE_KEYS.JSON_FORMATTER_PANEL_PERCENT">
       <template #left>
         <InputPanel v-model="input" />
       </template>

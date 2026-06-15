@@ -38,7 +38,10 @@ export interface RegexValidationResult {
  *
  * 空 pattern 不视为错误，避免用户刚打开工具时看到红色提示。
  */
-export function validateRegex(pattern: string): RegexValidationResult {
+export function validateRegex(
+  pattern: string,
+  flags = "",
+): RegexValidationResult {
   const trimmed = pattern.trim();
 
   if (trimmed.length === 0) {
@@ -46,7 +49,7 @@ export function validateRegex(pattern: string): RegexValidationResult {
   }
 
   try {
-    new RegExp(trimmed);
+    new RegExp(trimmed, flags);
     return { valid: true, empty: false };
   } catch (error) {
     return {
@@ -77,9 +80,7 @@ export function testRegex(
   let regex: RegExp;
 
   try {
-    // 确保 g 标志存在，以便获取所有匹配
-    const effectiveFlags = flags.includes("g") ? flags : flags + "g";
-    regex = new RegExp(trimmedPattern, effectiveFlags);
+    regex = new RegExp(trimmedPattern, flags);
   } catch (error) {
     return {
       success: false,
@@ -95,13 +96,25 @@ export function testRegex(
   const matches: RegexMatch[] = [];
 
   try {
-    for (const match of testString.matchAll(regex)) {
-      matches.push({
-        text: match[0],
-        index: match.index,
-        // 捕获组：从第二个元素开始（第一个是完整匹配）
-        groups: match.slice(1),
-      });
+    if (flags.includes("g")) {
+      for (const match of testString.matchAll(regex)) {
+        matches.push({
+          text: match[0],
+          index: match.index,
+          // 捕获组：从第二个元素开始（第一个是完整匹配）
+          groups: match.slice(1),
+        });
+      }
+    } else {
+      const match = regex.exec(testString);
+
+      if (match) {
+        matches.push({
+          text: match[0],
+          index: match.index,
+          groups: match.slice(1),
+        });
+      }
     }
   } catch (error) {
     return {

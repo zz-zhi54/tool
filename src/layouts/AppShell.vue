@@ -13,13 +13,6 @@ import YamlFormatterView from "../pages/yaml-formatter/index.vue";
 import { defaultToolId, findToolById } from "../tools/registry";
 
 /**
- * 左侧导航抽屉开关状态。
- *
- * 桌面端默认展开；导航宽度保持紧凑，避免挤压开发工具的主工作区。
- */
-const drawer = ref(true);
-
-/**
  * 当前选中的工具 ID。
  *
  * 第一阶段默认进入 JSON 格式化器；后续可改为首页或最近一次使用的工具。
@@ -59,17 +52,9 @@ function selectTool(toolId: string) {
 
 <template>
   <v-app>
-    <v-navigation-drawer v-model="drawer" border="r" rounded="lg" width="248">
-      <AppNavigation
-        :current-tool-id="currentToolId"
-        @select-tool="selectTool"
-      />
-    </v-navigation-drawer>
+    <ToolStatusBar :current-tool="currentTool" />
 
-    <ToolStatusBar
-      :current-tool="currentTool"
-      @toggle-navigation="drawer = !drawer"
-    />
+    <AppNavigation :current-tool-id="currentToolId" @select-tool="selectTool" />
 
     <v-main style="overflow: hidden">
       <v-container class="pa-2" fluid style="height: 100%; overflow: hidden">

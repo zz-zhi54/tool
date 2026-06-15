@@ -7,10 +7,6 @@ defineProps<{
   currentTool: ToolDefinition;
 }>();
 
-const emit = defineEmits<{
-  toggleNavigation: [];
-}>();
-
 // ── 主题切换 ──────────────────────────────────────────────
 
 type BuiltInThemeName = "system" | "light" | "dark";
@@ -53,14 +49,6 @@ function changeTheme(name: BuiltInThemeName) {
 
 <template>
   <v-app-bar border="b" density="compact" flat>
-    <template #prepend>
-      <v-app-bar-nav-icon
-        density="compact"
-        size="small"
-        @click="emit('toggleNavigation')"
-      />
-    </template>
-
     <v-app-bar-title class="text-body-1 font-weight-medium">
       {{ currentTool.title }}
     </v-app-bar-title>

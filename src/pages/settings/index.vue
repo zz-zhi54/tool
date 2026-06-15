@@ -1,30 +1,21 @@
 <script setup lang="ts">
-import { ref } from "vue";
+import { computed, ref } from "vue";
 
 import {
   getAllStorageItems,
   resetStorage,
   setStorage,
+  STORAGE_GROUPS,
   STORAGE_KEYS,
 } from "../../utils/storage";
-import type { StorageItemMeta } from "../../utils/storage";
-
-/**
- * 存储项常量名 → 中文标签映射。
- *
- * 新增存储项后需同步更新此映射。
- */
-const ITEM_LABELS: Record<string, string> = {
-  JSON_FORMATTER_PANEL_PERCENT: "JSON 格式化",
-  YAML_FORMATTER_PANEL_PERCENT: "YAML 格式化",
-  BASE64_CODEC_PANEL_PERCENT: "Base64 编解码",
-  REGEX_TESTER_PANEL_PERCENT: "正则测试",
-  SQL_GENERATOR_PANEL_PERCENT: "SQL IN 生成器",
-};
-
-/** 面板比例可拖拽范围，与 SplitPanel.clampPercent 一致 */
-const SLIDER_MIN = 15;
-const SLIDER_MAX = 85;
+import type {
+  RegexFlag,
+  RegexFlagsPreference,
+  SqlQuoteStyle,
+  StorageItem,
+  StorageItemMeta,
+  StorageItemName,
+} from "../../utils/storage";
 
 const snackbar = ref(false);
 const snackbarText = ref("");
@@ -36,58 +27,103 @@ const snackbarText = ref("");
  */
 const storageItems = ref<StorageItemMeta[]>(getAllStorageItems());
 
+const groupedItems = computed(() =>
+  STORAGE_GROUPS.map((group) => ({
+    ...group,
+    items: storageItems.value.filter((item) => item.group === group.id),
+  })).filter((group) => group.items.length > 0),
+);
+
 /** 刷新存储项列表 */
 function refresh() {
   storageItems.value = getAllStorageItems();
 }
 
 /**
- * 获取存储项的中文标签，未映射时回退为常量名。
+ * 根据存储项常量名获取 STORAGE_KEYS 中的定义。
  */
-function getLabel(name: string): string {
-  return ITEM_LABELS[name] ?? name;
+function getStorageItem(name: StorageItemName): StorageItem<unknown> {
+  return STORAGE_KEYS[name] as unknown as StorageItem<unknown>;
 }
 
-/**
- * 根据存储项常量名获取 STORAGE_KEYS 中的定义。
- * 用于 setStorage / resetStorage 调用。
- */
-function getStorageItem(name: string) {
-  return STORAGE_KEYS[name as keyof typeof STORAGE_KEYS];
+function getSliderValue(item: StorageItemMeta): number {
+  return typeof item.value === "number"
+    ? item.value
+    : Number(item.defaultValue);
+}
+
+function getToggleValue(item: StorageItemMeta): string {
+  return typeof item.value === "string"
+    ? item.value
+    : String(item.defaultValue);
+}
+
+function getFlagsValue(item: StorageItemMeta): RegexFlagsPreference {
+  return item.value as RegexFlagsPreference;
 }
 
 /**
  * 滑块值变更时持久化到 localStorage。
  */
-function handleSliderChange(name: string, value: number) {
+function handleSliderChange(name: StorageItemName, value: number) {
   const item = getStorageItem(name);
-  if (item) {
-    setStorage(item, value);
-    refresh();
+
+  if (item.control.type !== "slider") {
+    return;
   }
+
+  setStorage(item, value);
+  refresh();
+}
+
+function handleToggleChange(name: StorageItemName, value: string) {
+  const item = getStorageItem(name);
+
+  if (item.control.type !== "toggle") {
+    return;
+  }
+
+  setStorage(item, value as SqlQuoteStyle);
+  refresh();
+}
+
+function handleCheckboxChange(
+  name: StorageItemName,
+  flag: string,
+  checked: boolean | null,
+) {
+  const item = getStorageItem(name);
+
+  if (item.control.type !== "checkboxes") {
+    return;
+  }
+
+  const current = getFlagsValue(
+    storageItems.value.find((storageItem) => storageItem.name === name)!,
+  );
+
+  setStorage(item, {
+    ...current,
+    [flag as RegexFlag]: Boolean(checked),
+  });
+  refresh();
 }
 
 /**
  * 重置单个存储项为默认值。
  */
-function handleResetItem(name: string) {
-  const item = getStorageItem(name);
-  if (item) {
-    resetStorage(item);
-    refresh();
-    showMessage(`${getLabel(name)} 已重置为默认值`);
-  }
+function handleResetItem(item: StorageItemMeta) {
+  resetStorage(getStorageItem(item.name));
+  refresh();
+  showMessage(`${item.label} 已重置为默认值`);
 }
 
 /**
  * 重置所有存储项为默认值。
  */
 function handleResetAll() {
-  for (const name of Object.keys(STORAGE_KEYS)) {
-    const item = getStorageItem(name);
-    if (item) {
-      resetStorage(item);
-    }
+  for (const name of Object.keys(STORAGE_KEYS) as StorageItemName[]) {
+    resetStorage(getStorageItem(name));
   }
   refresh();
   showMessage("所有设置已重置为默认值");
@@ -110,6 +146,8 @@ function showMessage(message: string) {
         设置
       </v-toolbar-title>
 
+      <v-spacer />
+
       <v-btn
         color="warning"
         density="compact"
@@ -122,55 +160,113 @@ function showMessage(message: string) {
     </v-toolbar>
 
     <!-- 可滚动内容区 -->
-    <div style="flex: 1 1 auto; min-height: 0; overflow: auto">
-      <!-- 面板比例设置 -->
-      <v-card border flat rounded>
-        <v-card-title class="text-body-2 font-weight-medium">
-          面板比例
-        </v-card-title>
+    <div
+      class="d-flex flex-column ga-3"
+      style="flex: 1 1 auto; min-height: 0; overflow: auto"
+    >
+      <v-card v-for="group in groupedItems" :key="group.id" border flat rounded>
+        <v-card-item :subtitle="group.description" :title="group.title" />
 
         <v-divider />
 
         <v-card-text class="d-flex flex-column ga-4">
           <div
-            v-for="item in storageItems"
+            v-for="item in group.items"
             :key="item.name"
-            class="d-flex align-center ga-3"
+            class="d-flex align-center ga-3 flex-wrap"
           >
             <!-- 标签 -->
-            <span class="text-body-2" style="min-width: 110px; flex-shrink: 0">
-              {{ getLabel(item.name) }}
-            </span>
+            <div style="min-width: 150px; flex: 0 0 150px">
+              <div class="text-body-2 font-weight-medium">
+                {{ item.label }}
+              </div>
+              <div
+                v-if="item.description"
+                class="text-caption text-medium-emphasis"
+              >
+                {{ item.description }}
+              </div>
+            </div>
 
-            <!-- 滑块 -->
-            <v-slider
-              :model-value="item.value"
-              :min="SLIDER_MIN"
-              :max="SLIDER_MAX"
-              :step="1"
-              density="compact"
-              hide-details
-              thumb-label
-              @update:model-value="
-                (v: number) => handleSliderChange(item.name, v)
-              "
-            />
+            <!-- 控件 -->
+            <div style="min-width: 220px; flex: 1 1 260px">
+              <v-slider
+                v-if="item.control.type === 'slider'"
+                :model-value="getSliderValue(item)"
+                :min="item.control.min"
+                :max="item.control.max"
+                :step="item.control.step"
+                density="compact"
+                hide-details
+                thumb-label
+                @update:model-value="
+                  (value: number) => handleSliderChange(item.name, value)
+                "
+              />
 
-            <!-- 默认值提示 -->
-            <span
-              class="text-caption text-medium-emphasis"
-              style="min-width: 65px; flex-shrink: 0; text-align: right"
-            >
-              默认: {{ item.defaultValue }}%
-            </span>
+              <v-btn-toggle
+                v-else-if="item.control.type === 'toggle'"
+                :model-value="getToggleValue(item)"
+                density="compact"
+                mandatory
+                variant="outlined"
+                @update:model-value="
+                  (value: string) => handleToggleChange(item.name, value)
+                "
+              >
+                <v-btn
+                  v-for="option in item.control.options"
+                  :key="option.value"
+                  size="small"
+                  :text="option.title"
+                  :value="option.value"
+                />
+              </v-btn-toggle>
+
+              <div v-else class="d-flex ga-2 flex-wrap">
+                <v-checkbox-btn
+                  v-for="option in item.control.options"
+                  :key="option.value"
+                  :model-value="getFlagsValue(item)[option.value as RegexFlag]"
+                  :label="option.title"
+                  :title="option.description"
+                  density="compact"
+                  hide-details
+                  @update:model-value="
+                    (value: boolean | null) =>
+                      handleCheckboxChange(item.name, option.value, value)
+                  "
+                />
+              </div>
+            </div>
+
+            <!-- 当前值/默认值 -->
+            <div class="d-flex align-center ga-1" style="flex: 0 0 auto">
+              <v-chip color="primary" label size="x-small" variant="tonal">
+                当前：{{ item.displayValue }}
+              </v-chip>
+              <v-chip label size="x-small" variant="outlined">
+                默认：{{ item.displayDefaultValue }}
+              </v-chip>
+              <v-chip
+                v-if="!item.isDefault"
+                color="warning"
+                label
+                size="x-small"
+                variant="tonal"
+              >
+                已自定义
+              </v-chip>
+            </div>
 
             <!-- 单项重置按钮 -->
             <v-btn
+              :disabled="item.isDefault"
               density="compact"
               icon="$refresh"
               size="x-small"
               variant="text"
-              @click="handleResetItem(item.name)"
+              @click="handleResetItem(item)"
             />
           </div>
         </v-card-text>

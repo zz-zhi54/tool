@@ -1,30 +1,33 @@
 <script setup lang="ts">
 import { computed, onBeforeUnmount, ref } from "vue";
 
+import { getStorage, setStorage } from "../utils/storage";
+import type { StorageItem } from "../utils/storage";
+
 /**
  * 左右分栏容器组件。
  *
  * 支持两种模式：
- * - 可拖拽调节比例（传入 storageKey，比例持久化到 localStorage）
- * - 固定 50/50 分栏（不传 storageKey）
+ * - 可拖拽调节比例（传入 storageItem，比例持久化到 localStorage）
+ * - 固定 50/50 分栏（不传 storageItem）
  *
- * 拖拽比例限制在 15% - 85% 之间，避免任意一侧被压到不可用。
+ * 拖拽比例默认限制在 15% - 85% 之间，避免任意一侧被压到不可用。
  */
 const props = withDefaults(
   defineProps<{
-    /** localStorage 键名；不传则固定 50/50 不可拖拽 */
-    storageKey?: string | null;
-    /** 初始左侧面板百分比，默认 50 */
+    /** 分栏比例存储项；不传则固定 50/50 不可拖拽 */
+    storageItem?: StorageItem<number> | null;
+    /** 无存储项时的左侧面板百分比，默认 50 */
     defaultPercent?: number;
   }>(),
   {
-    storageKey: null,
+    storageItem: null,
     defaultPercent: 50,
   },
 );
 
 /** 是否启用可拖拽调节 */
-const resizable = computed(() => props.storageKey !== null);
+const resizable = computed(() => props.storageItem !== null);
 
 /** 左侧面板宽度百分比 */
 const leftPercent = ref(readPercent());
@@ -54,41 +57,45 @@ const rightStyle = computed(() =>
 );
 
 /**
- * 从 localStorage 读取已保存的面板比例。
- * 未设置或解析失败时返回 defaultPercent。
+ * 从集中存储读取已保存的面板比例。
+ * 无存储项时返回 defaultPercent。
  */
 function readPercent(): number {
-  if (!props.storageKey) {
+  if (!props.storageItem) {
     return props.defaultPercent;
   }
 
-  const raw = localStorage.getItem(props.storageKey);
-
-  if (raw === null) {
-    return props.defaultPercent;
-  }
-
-  try {
-    return JSON.parse(raw) as number;
-  } catch {
-    return props.defaultPercent;
-  }
+  return clampPercent(getStorage(props.storageItem));
 }
 
 /**
- * 将当前面板比例写入 localStorage。
+ * 将当前面板比例写入集中存储。
  */
 function savePercent(): void {
-  if (props.storageKey) {
-    localStorage.setItem(props.storageKey, JSON.stringify(leftPercent.value));
+  if (props.storageItem) {
+    setStorage(props.storageItem, leftPercent.value);
   }
 }
 
 /**
- * 限制左右面板比例范围在 15% - 85%。
+ * 读取当前存储项允许的比例范围。
+ */
+function getPercentRange(): { min: number; max: number } {
+  const control = props.storageItem?.control;
+
+  if (control?.type === "slider") {
+    return { min: control.min, max: control.max };
+  }
+
+  return { min: 15, max: 85 };
+}
+
+/**
+ * 限制左右面板比例范围。
  */
 function clampPercent(value: number): number {
-  return Math.min(85, Math.max(15, value));
+  const { min, max } = getPercentRange();
+  return Math.min(max, Math.max(min, value));
 }
 
 /**

@@ -1,25 +1,22 @@
 <script setup lang="ts">
-import { computed, ref } from "vue";
+import { computed, ref, watch } from "vue";
 
 import PanelCard from "../../components/PanelCard.vue";
 import SplitPanel from "../../components/SplitPanel.vue";
 import { testRegex, validateRegex } from "../../tools/regex/regexTester";
-import { STORAGE_KEYS } from "../../utils/storage";
+import { getStorage, setStorage, STORAGE_KEYS } from "../../utils/storage";
+import type { RegexFlag, RegexFlagsPreference } from "../../utils/storage";
 
 const pattern = ref("");
 const testString = ref("");
-const flags = ref<Record<string, boolean>>({
-  g: true,
-  i: false,
-  m: false,
-  s: false,
-  u: false,
-});
+const flags = ref<RegexFlagsPreference>(
+  getStorage(STORAGE_KEYS.REGEX_TESTER_FLAGS),
+);
 const snackbar = ref(false);
 const snackbarText = ref("");
 
 /** 可用的正则标志位 */
-const flagOptions = [
+const flagOptions: Array<{ key: RegexFlag; label: string; title: string }> = [
   { key: "g", label: "g", title: "全局匹配" },
   { key: "i", label: "i", title: "忽略大小写" },
   { key: "m", label: "m", title: "多行模式" },
@@ -37,10 +34,20 @@ const activeFlags = computed(() =>
     .join(""),
 );
 
+watch(
+  flags,
+  (value) => {
+    setStorage(STORAGE_KEYS.REGEX_TESTER_FLAGS, { ...value });
+  },
+  { deep: true },
+);
+
 /**
  * 正则语法校验。
  */
-const validation = computed(() => validateRegex(pattern.value));
+const validation = computed(() =>
+  validateRegex(pattern.value, activeFlags.value),
+);
 
 /**
  * 实时匹配结果。
@@ -249,7 +256,7 @@ function showMessage(message: string) {
     </v-card>
 
     <!-- 工作区：左侧测试文本 + 右侧匹配结果，比例持久化到 localStorage -->
-    <SplitPanel :storage-key="STORAGE_KEYS.REGEX_TESTER_PANEL_PERCENT.key">
+    <SplitPanel :storage-item="STORAGE_KEYS.REGEX_TESTER_PANEL_PERCENT">
       <template #left>
         <PanelCard icon="$file" title="测试字符串">
           <textarea

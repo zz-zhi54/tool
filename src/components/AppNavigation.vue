@@ -1,8 +1,9 @@
 <script setup lang="ts">
 import { computed } from "vue";
+import { useDisplay } from "vuetify";
 
 import { toolCategories, tools } from "../tools/registry";
-import type { ToolDefinition } from "../types/tool";
+import type { ToolCategoryId, ToolDefinition } from "../types/tool";
 
 const props = defineProps<{
   currentToolId: string;
@@ -12,11 +13,20 @@ const emit = defineEmits<{
   selectTool: [toolId: string];
 }>();
 
+const { mdAndUp } = useDisplay();
+
+const categoryIcons: Record<ToolCategoryId, string> = {
+  "data-format": "$json",
+  encoding: "$codeBraces",
+  time: "$codeTags",
+  text: "$regex",
+};
+
 /**
  * 按分类组织后的工具列表。
  *
  * 导航只负责展示和选择工具，不直接关心工具页面如何实现，
- * 这样后续新增 YAML、Base64 等工具时只需要维护注册表。
+ * 这样后续新增工具时只需要维护注册表。
  */
 const groupedTools = computed(() =>
   toolCategories.map((category) => ({
@@ -40,54 +50,58 @@ function selectTool(tool: ToolDefinition) {
 </script>
 
 <template>
-  <!--
-    单一连续列表：工具分类和系统设置在同一个 v-list 中展示，
-    通过 subheader 的 mt-4/mt-6 间距实现自然分组，不再使用 divider。
-  -->
-  <v-list density="compact" nav rounded="lg">
-    <!-- 应用头部 -->
-    <v-card class="mb-2" rounded="lg" variant="tonal">
-      <v-card-item
-        prepend-icon="$file"
-        subtitle="本地开发者小工具"
-        title="Tool Workbench"
-      />
-    </v-card>
+  <v-app-bar border="b" density="compact" flat location="top">
+    <v-icon class="ml-3 mr-2" icon="$dashboard" size="small" />
+    <span v-if="mdAndUp" class="text-body-2 font-weight-medium">
+      Tool Workbench
+    </span>
 
-    <!-- 工具分类 -->
-    <template v-for="group in groupedTools" :key="group.id">
-      <v-list-subheader class="mt-2" :title="group.title" />
+    <v-divider class="mx-2" vertical />
 
-      <v-list-item
-        v-for="tool in group.tools"
-        :key="tool.id"
-        :active="props.currentToolId === tool.id"
-        :disabled="tool.status === 'planned'"
-        :prepend-icon="tool.icon"
-        :subtitle="tool.status === 'planned' ? '规划中' : undefined"
-        :title="tool.title"
-        :variant="props.currentToolId === tool.id ? 'flat' : 'text'"
-        rounded="xl"
-        @click="selectTool(tool)"
-      >
-        <template v-if="tool.status === 'planned'" #append>
-          <v-chip color="secondary" size="x-small" variant="tonal">
-            soon
-          </v-chip>
-        </template>
-      </v-list-item>
-    </template>
+    <v-menu
+      v-for="group in groupedTools"
+      :key="group.id"
+      location="bottom start"
+    >
+      <template #activator="{ props: menuProps }">
+        <v-btn
+          v-bind="menuProps"
+          :append-icon="mdAndUp ? '$expand' : undefined"
+          density="compact"
+          :icon="mdAndUp ? undefined : categoryIcons[group.id]"
+          :prepend-icon="mdAndUp ? categoryIcons[group.id] : undefined"
+          size="small"
+          :text="mdAndUp ? group.title : undefined"
+          variant="text"
+        />
+      </template>
 
-    <!-- 系统功能入口 -->
-    <v-divider class="my-2" inset />
-    <v-list-subheader title="系统" />
-    <v-list-item
-      :active="props.currentToolId === '__settings'"
-      :variant="props.currentToolId === '__settings' ? 'flat' : 'text'"
-      prepend-icon="$settings"
-      rounded="xl"
-      title="设置"
+      <v-list density="compact" min-width="180" nav>
+        <v-list-item
+          v-for="tool in group.tools"
+          :key="tool.id"
+          :active="props.currentToolId === tool.id"
+          :disabled="tool.status === 'planned'"
+          :prepend-icon="tool.icon"
+          :subtitle="tool.status === 'planned' ? '规划中' : undefined"
+          :title="tool.title"
+          @click="selectTool(tool)"
+        />
+      </v-list>
+    </v-menu>
+
+    <v-spacer />
+
+    <v-divider class="mx-2" vertical />
+
+    <v-btn
+      density="compact"
+      :icon="mdAndUp ? undefined : '$settings'"
+      :prepend-icon="mdAndUp ? '$settings' : undefined"
+      size="small"
+      :text="mdAndUp ? '设置' : undefined"
+      variant="text"
       @click="emit('selectTool', '__settings')"
     />
-  </v-list>
+  </v-app-bar>
 </template>

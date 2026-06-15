@@ -200,7 +200,7 @@ function showMessage(message: string) {
     </v-toolbar>
 
     <!-- 工作区：左右面板比例持久化到 localStorage -->
-    <SplitPanel :storage-key="STORAGE_KEYS.BASE64_CODEC_PANEL_PERCENT.key">
+    <SplitPanel :storage-item="STORAGE_KEYS.BASE64_CODEC_PANEL_PERCENT">
       <template #left>
         <PanelCard icon="$file" title="输入文本">
           <textarea
