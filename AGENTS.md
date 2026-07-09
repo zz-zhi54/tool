@@ -75,7 +75,16 @@
 
 ## Testing Guidelines
 
-目前尚未接入自动化测试框架。修改后请通过 `npm run tauri dev` 进行人工验证。`.github/workflows/ci.yml` 会在 PR / push 时执行 `vue-tsc --noEmit`、`prettier --check`、`cargo fmt --check`、`cargo clippy -- -D warnings`，本地提交前请跑一遍同名命令。
+目前尚未接入自动化测试框架。修改后请通过 `npm run tauri dev` 进行人工验证。**PR / push 不再触发 CI**，所有类型检查与格式校验请在本地提交前自行跑一遍：
+
+```bash
+npx vue-tsc --noEmit
+npx prettier --check "src/**/*.{vue,ts,css,json}"
+cargo fmt --check --manifest-path src-tauri/Cargo.toml
+cargo clippy --manifest-path src-tauri/Cargo.toml -- -D warnings
+```
+
+> 仓库已开启 Dependabot 定期升级 npm / Cargo / GitHub Actions 依赖；版本变更的回归靠本地命令兜底。
 
 新增测试时，推荐在 `src/` 下按 `*.spec.ts` 形式就近放置，并在 `package.json` 中添加 `vitest` 脚本；`src-tauri` 中的 Tauri 命令逻辑请使用标准的 `#[cfg(test)]` 模块覆盖。
 
