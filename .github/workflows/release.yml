@@ -20,7 +20,7 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - platform: macos-latest
+          - platform: macos-15
             args: --target universal-apple-darwin
           - platform: windows-2022
             args: ''
@@ -34,9 +34,9 @@ jobs:
           fetch-depth: 0
 
       - name: Setup Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v5
         with:
-          node-version: '20'
+          node-version: '24'
           cache: 'npm'
 
       - name: Setup Rust
@@ -70,6 +70,9 @@ jobs:
       - name: Install frontend deps
         run: npm ci
 
+      - name: Compute bare version (strip leading v)
+        run: echo "RAW_VERSION=${GITHUB_REF_NAME#v}" >> "$GITHUB_ENV"
+
       - name: Build & publish release (tauri-action)
         uses: tauri-apps/tauri-action@v0
         with:
@@ -84,9 +87,11 @@ jobs:
 
             ### 下载
 
-            - **macOS (Universal)**: `tool_universal.dmg`
-            - **Windows (x64)**: `tool_x64-setup.exe`（NSIS 安装包）
-            - **Linux (x64)**: `tool_amd64.AppImage` / `.deb` / `.rpm`
+            文件名格式: `tool_${{ env.RAW_VERSION }}_<target>.<ext>`
+
+            - **macOS (Universal)**: `tool_${{ env.RAW_VERSION }}_universal.dmg`(同时附 `tool_universal.app.tar.gz`)
+            - **Windows (x64)**: `tool_${{ env.RAW_VERSION }}_x64-setup.exe`（NSIS 安装包）/ `tool_${{ env.RAW_VERSION }}_x64_en-US.msi`
+            - **Linux (x64)**: `tool_${{ env.RAW_VERSION }}_amd64.AppImage` / `tool_${{ env.RAW_VERSION }}_amd64.deb` / `tool-${{ env.RAW_VERSION }}-1.x86_64.rpm`
 
             ### 已知问题
 
