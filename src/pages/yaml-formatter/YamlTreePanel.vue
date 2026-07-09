@@ -1,10 +1,10 @@
 <script setup lang="ts">
 import { computed, nextTick, ref, useTemplateRef, watch } from "vue";
 
+import { ApartmentOutlined, SearchOutlined } from "@ant-design/icons-vue";
+
 /**
  * YAML 树节点结构。
- *
- * 与 JSON 树节点保持一致，方便 Vuetify v-treeview 渲染。
  */
 interface YamlTreeNode {
   id: string;
@@ -19,16 +19,11 @@ const props = defineProps<{
   value?: unknown;
 }>();
 
-const openedNodes = ref<string[]>([]);
+const expandedKeys = ref<string[]>([]);
 const searchQuery = ref("");
 const searchVisible = ref(false);
 const searchFieldRef = useTemplateRef<HTMLElement>("searchField");
 
-/**
- * 树形视图数据。
- *
- * 将 YAML 解析后的 JS 对象/数组转换为 v-treeview 的 children 结构。
- */
 const allTreeItems = computed<YamlTreeNode[]>(() => {
   if (props.value === undefined || props.value === null) {
     return [];
@@ -37,11 +32,6 @@ const allTreeItems = computed<YamlTreeNode[]>(() => {
   return [createTreeNode(props.value, "root", "root")];
 });
 
-/**
- * 搜索后的树形视图数据。
- *
- * 保留命中节点的祖先路径，避免只看到孤立节点。
- */
 const treeItems = computed<YamlTreeNode[]>(() => {
   const keyword = searchQuery.value.trim().toLowerCase();
 
@@ -54,22 +44,14 @@ const treeItems = computed<YamlTreeNode[]>(() => {
     .filter((node): node is YamlTreeNode => node !== undefined);
 });
 
-/**
- * YAML 结构变化或搜索关键字变化时默认展开树节点。
- */
 watch(
   () => [props.value, searchQuery.value],
   () => {
-    openedNodes.value = collectExpandableIds(treeItems.value);
+    expandedKeys.value = collectExpandableIds(treeItems.value);
   },
   { immediate: true },
 );
 
-/**
- * 根据值创建树节点。
- *
- * 递归处理对象、数组和基础类型，生成 v-treeview 可用的数据结构。
- */
 function createTreeNode(
   value: unknown,
   label: string,
@@ -107,25 +89,16 @@ function createTreeNode(
   };
 }
 
-/**
- * 判断一个值是否是普通对象。
- */
 function isPlainObject(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 
-/**
- * 获取基础值的类型名称。
- */
 function getPrimitiveType(value: unknown): string {
   if (value === null) return "null";
   if (value === undefined) return "undefined";
   return typeof value;
 }
 
-/**
- * 格式化基础值为显示文本。
- */
 function formatPrimitiveValue(value: unknown): string {
   if (value === null) return "null";
   if (value === undefined) return "undefined";
@@ -133,12 +106,6 @@ function formatPrimitiveValue(value: unknown): string {
   return String(value);
 }
 
-/**
- * 按关键字过滤树节点。
- *
- * 节点的字段名、类型摘要或基础值命中时保留；
- * 子节点命中时也保留父节点，保持路径完整。
- */
 function filterTreeNode(
   node: YamlTreeNode,
   keyword: string,
@@ -160,23 +127,14 @@ function filterTreeNode(
   };
 }
 
-/**
- * 展开所有对象和数组节点。
- */
 function expandAll() {
-  openedNodes.value = collectExpandableIds(treeItems.value);
+  expandedKeys.value = collectExpandableIds(treeItems.value);
 }
 
-/**
- * 折叠所有对象和数组节点。
- */
 function collapseAll() {
-  openedNodes.value = [];
+  expandedKeys.value = [];
 }
 
-/**
- * 切换搜索框可见性。
- */
 async function toggleSearch() {
   if (searchVisible.value) {
     searchQuery.value = "";
@@ -189,9 +147,6 @@ async function toggleSearch() {
   searchFieldRef.value?.focus();
 }
 
-/**
- * 收集所有可展开节点 ID。
- */
 function collectExpandableIds(nodes: YamlTreeNode[]): string[] {
   return nodes.flatMap((node) => {
     if (!node.children?.length) {
@@ -204,85 +159,93 @@ function collectExpandableIds(nodes: YamlTreeNode[]): string[] {
 </script>
 
 <template>
-  <v-card
-    border="sm"
+  <section
     class="d-flex flex-column"
-    flat
-    height="100%"
-    style="min-height: 0; overflow: hidden"
+    style="
+      height: 100%;
+      min-height: 0;
+      overflow: hidden;
+      border: 1px solid var(--app-border);
+      border-radius: 4px;
+      background-color: var(--app-surface);
+    "
   >
-    <v-card-title
+    <header
       class="d-flex align-center text-body-2 font-weight-medium px-2 py-1"
+      style="
+        flex: 0 0 auto;
+        gap: 4px;
+        border-bottom: 1px solid var(--app-border);
+      "
     >
-      <v-icon class="mr-1" icon="$subgroup" size="small" />
-      结构视图
-      <v-spacer />
-
-      <v-btn
-        class="mr-1"
-        density="compact"
-        icon="$search"
-        size="x-small"
-        variant="text"
-        @click.stop="toggleSearch"
+      <ApartmentOutlined
+        style="font-size: 14px; color: var(--app-text-muted)"
       />
+      结构视图
+      <span style="flex: 1 1 auto" />
 
-      <v-btn-group density="compact" variant="tonal">
-        <v-btn size="x-small" text="展开" @click.stop="expandAll" />
-        <v-btn size="x-small" text="折叠" @click.stop="collapseAll" />
-      </v-btn-group>
-    </v-card-title>
+      <a-button size="small" type="text" @click.stop="toggleSearch">
+        <template #icon>
+          <SearchOutlined />
+        </template>
+      </a-button>
 
-    <v-divider />
+      <a-space :size="4">
+        <a-button size="small" type="default" @click.stop="expandAll">
+          展开
+        </a-button>
+        <a-button size="small" type="default" @click.stop="collapseAll">
+          折叠
+        </a-button>
+      </a-space>
+    </header>
 
-    <div v-if="searchVisible" class="px-2 py-1">
-      <v-text-field
+    <div
+      v-if="searchVisible"
+      class="px-2 py-1"
+      style="flex: 0 0 auto; border-bottom: 1px solid var(--app-border)"
+    >
+      <a-input
         ref="searchField"
-        v-model="searchQuery"
-        clearable
-        density="compact"
-        hide-details
+        v-model:value="searchQuery"
+        allow-clear
         placeholder="搜索字段或值"
-        single-line
-        variant="outlined"
+        size="small"
       />
     </div>
 
-    <v-divider v-if="searchVisible" />
-
-    <v-card-text class="pa-2" style="flex: 1; min-height: 0; overflow: auto">
-      <v-alert
+    <div class="pa-2" style="flex: 1; min-height: 0; overflow: auto">
+      <a-empty
         v-if="treeItems.length === 0"
-        density="compact"
-        type="info"
-        variant="tonal"
+        description="粘贴合法 YAML 后，结构视图会自动生成并默认展开。"
+        :image="undefined"
       >
-        粘贴合法 YAML 后，结构视图会自动生成并默认展开。
-      </v-alert>
+        <template #image>
+          <span />
+        </template>
+      </a-empty>
 
-      <v-treeview
+      <a-tree
         v-else
-        v-model:opened="openedNodes"
-        :items="treeItems"
-        density="compact"
-        item-children="children"
-        item-title="label"
-        item-value="id"
-        open-on-click
+        v-model:expanded-keys="expandedKeys"
+        :tree-data="treeItems"
+        :field-names="{ key: 'id', title: 'label', children: 'children' }"
+        :block-node="true"
+        :selectable="false"
+        :virtual="false"
       >
-        <template #title="{ item }">
-          <span class="text-body-2 font-weight-medium">{{ item.label }}</span>
-          <v-chip class="ml-1" size="x-small" variant="tonal">
-            {{ item.type }}
-          </v-chip>
+        <template #title="{ label, type, value }">
+          <span class="text-body-2 font-weight-medium">{{ label }}</span>
+          <a-tag class="ml-1" size="small">{{ type }}</a-tag>
           <span
-            v-if="item.value"
-            class="ml-1 text-caption text-medium-emphasis"
+            v-if="value"
+            class="ml-1 text-caption"
+            style="color: var(--app-text-muted)"
           >
-            {{ item.value }}
+            {{ value }}
           </span>
         </template>
-      </v-treeview>
-    </v-card-text>
-  </v-card>
+      </a-tree>
+    </div>
+  </section>
 </template>

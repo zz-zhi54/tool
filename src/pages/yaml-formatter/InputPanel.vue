@@ -1,10 +1,15 @@
 <script setup lang="ts">
 import { nextTick, ref, useTemplateRef } from "vue";
 
+import {
+  FileTextOutlined,
+  LeftOutlined,
+  RightOutlined,
+  SearchOutlined,
+} from "@ant-design/icons-vue";
+
 /**
  * YAML 输入面板：标题栏 + 搜索 + 文本框。
- *
- * 通过 v-model 双向绑定文本内容，搜索通过 setSelectionRange 定位匹配项。
  */
 const model = defineModel<string>({ default: "" });
 
@@ -13,11 +18,6 @@ const searchVisible = ref(false);
 const searchFieldRef = useTemplateRef<HTMLInputElement>("searchField");
 const textareaRef = useTemplateRef<HTMLTextAreaElement>("textarea");
 
-/**
- * 切换搜索框可见性。
- *
- * 展开时自动聚焦输入框；收起时清空搜索关键字。
- */
 async function toggleSearch() {
   if (searchVisible.value) {
     searchQuery.value = "";
@@ -30,9 +30,6 @@ async function toggleSearch() {
   searchFieldRef.value?.focus();
 }
 
-/**
- * 在 textarea 中定位并选中下一个匹配项，并滚动到可见区域。
- */
 function findNext() {
   const el = textareaRef.value;
   const keyword = searchQuery.value.trim();
@@ -48,9 +45,6 @@ function findNext() {
   selectAndScroll(el, index, keyword.length);
 }
 
-/**
- * 在 textarea 中定位并选中上一个匹配项，并滚动到可见区域。
- */
 function findPrevious() {
   const el = textareaRef.value;
   const keyword = searchQuery.value.trim();
@@ -67,9 +61,6 @@ function findPrevious() {
   selectAndScroll(el, index, keyword.length);
 }
 
-/**
- * 选中指定范围并滚动到可视区域。
- */
 function selectAndScroll(
   el: HTMLTextAreaElement,
   start: number,
@@ -92,81 +83,69 @@ function selectAndScroll(
 </script>
 
 <template>
-  <v-card
-    border="sm"
+  <section
     class="d-flex flex-column"
-    flat
-    height="100%"
-    style="min-height: 0; overflow: hidden"
+    style="
+      height: 100%;
+      min-height: 0;
+      overflow: hidden;
+      border: 1px solid var(--app-border);
+      border-radius: 4px;
+      background-color: var(--app-surface);
+    "
   >
-    <v-card-title
+    <header
       class="d-flex align-center text-body-2 font-weight-medium px-2 py-1"
+      style="
+        flex: 0 0 auto;
+        gap: 4px;
+        border-bottom: 1px solid var(--app-border);
+      "
     >
-      <v-icon class="mr-1" icon="$file" size="small" />
+      <FileTextOutlined style="font-size: 14px; color: var(--app-text-muted)" />
       输入 YAML
-      <v-spacer />
-      <v-btn
-        density="compact"
-        icon="$search"
-        size="x-small"
-        variant="text"
-        @click.stop="toggleSearch"
-      />
-    </v-card-title>
+      <span style="flex: 1 1 auto" />
+      <a-button size="small" type="text" @click.stop="toggleSearch">
+        <template #icon>
+          <SearchOutlined />
+        </template>
+      </a-button>
+    </header>
 
-    <!-- 搜索栏 -->
-    <div v-if="searchVisible" class="px-2 py-1">
-      <v-row align="center" class="ga-1 ma-0" no-gutters>
-        <v-col>
-          <v-text-field
-            ref="searchField"
-            v-model="searchQuery"
-            clearable
-            density="compact"
-            hide-details
-            placeholder="搜索文本"
-            single-line
-            variant="outlined"
-            @keydown.enter.prevent="findNext"
-          />
-        </v-col>
-        <v-btn
-          density="compact"
-          icon="$prev"
-          size="x-small"
-          variant="text"
-          @click.stop="findPrevious"
+    <div
+      v-if="searchVisible"
+      class="px-2 py-1"
+      style="flex: 0 0 auto; border-bottom: 1px solid var(--app-border)"
+    >
+      <div class="d-flex align-center ga-1" style="margin: 0">
+        <a-input
+          ref="searchField"
+          v-model:value="searchQuery"
+          allow-clear
+          placeholder="搜索文本"
+          size="small"
+          @keydown.enter.prevent="findNext"
         />
-        <v-btn
-          density="compact"
-          icon="$next"
-          size="x-small"
-          variant="text"
-          @click.stop="findNext"
-        />
-      </v-row>
+        <a-button size="small" type="text" @click.stop="findPrevious">
+          <template #icon>
+            <LeftOutlined />
+          </template>
+        </a-button>
+        <a-button size="small" type="text" @click.stop="findNext">
+          <template #icon>
+            <RightOutlined />
+          </template>
+        </a-button>
+      </div>
     </div>
 
-    <v-divider />
-
-    <v-card-text class="pa-2" style="flex: 1; min-height: 0; overflow: hidden">
+    <div class="pa-2" style="flex: 1; min-height: 0; overflow: hidden">
       <textarea
         ref="textarea"
         v-model="model"
+        class="app-textarea"
         placeholder="粘贴需要处理的 YAML，例如：&#10;name: tool&#10;version: 1.0"
-        style="
-          width: 100%;
-          height: 100%;
-          resize: none;
-          border: none;
-          outline: none;
-          background: transparent;
-          font-family: inherit;
-          font-size: inherit;
-          line-height: inherit;
-          color: inherit;
-        "
       />
-    </v-card-text>
-  </v-card>
+    </div>
+  </section>
 </template>

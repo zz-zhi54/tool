@@ -1,6 +1,13 @@
 <script setup lang="ts">
 import { nextTick, ref, useTemplateRef } from "vue";
 
+import {
+  FileTextOutlined,
+  LeftOutlined,
+  RightOutlined,
+  SearchOutlined,
+} from "@ant-design/icons-vue";
+
 /**
  * 输入面板：标题栏 + 搜索 + 文本框。
  *
@@ -15,8 +22,6 @@ const textareaRef = useTemplateRef<HTMLTextAreaElement>("textarea");
 
 /**
  * 切换搜索框可见性。
- *
- * 展开时自动聚焦输入框；收起时清空搜索关键字。
  */
 async function toggleSearch() {
   if (searchVisible.value) {
@@ -69,9 +74,6 @@ function findPrevious() {
 
 /**
  * 选中指定范围并滚动到可视区域。
- *
- * 通过文本前的换行数计算目标行号，结合行高设置 scrollTop，
- * 让匹配项居中显示。
  */
 function selectAndScroll(
   el: HTMLTextAreaElement,
@@ -83,96 +85,82 @@ function selectAndScroll(
   el.focus();
   el.setSelectionRange(start, start + length);
 
-  // 计算选中位置所在行号
   const textBefore = el.value.substring(0, start);
   const lineNumber = (textBefore.match(/\n/g) || []).length;
 
-  // 从计算样式获取行高
   const cs = getComputedStyle(el);
   const lineHeight = parseFloat(cs.lineHeight) || parseFloat(cs.fontSize) * 1.2;
 
-  // 让匹配行居中显示
   const targetTop = lineNumber * lineHeight;
   el.scrollTop = Math.max(0, targetTop - el.clientHeight / 2);
 }
 </script>
 
 <template>
-  <v-card
-    border="sm"
+  <section
     class="d-flex flex-column"
-    flat
-    height="100%"
-    style="min-height: 0; overflow: hidden"
+    style="
+      height: 100%;
+      min-height: 0;
+      overflow: hidden;
+      border: 1px solid var(--app-border);
+      border-radius: 4px;
+      background-color: var(--app-surface);
+    "
   >
-    <v-card-title
+    <header
       class="d-flex align-center text-body-2 font-weight-medium px-2 py-1"
+      style="
+        flex: 0 0 auto;
+        gap: 4px;
+        border-bottom: 1px solid var(--app-border);
+      "
     >
-      <v-icon class="mr-1" icon="$file" size="small" />
+      <FileTextOutlined style="font-size: 14px; color: var(--app-text-muted)" />
       输入 JSON
-      <v-spacer />
-      <v-btn
-        density="compact"
-        icon="$search"
-        size="x-small"
-        variant="text"
-        @click.stop="toggleSearch"
-      />
-    </v-card-title>
+      <span style="flex: 1 1 auto" />
+      <a-button size="small" type="text" @click.stop="toggleSearch">
+        <template #icon>
+          <SearchOutlined />
+        </template>
+      </a-button>
+    </header>
 
     <!-- 搜索栏 -->
-    <div v-if="searchVisible" class="px-2 py-1">
-      <v-row align="center" class="ga-1 ma-0" no-gutters>
-        <v-col>
-          <v-text-field
-            ref="searchField"
-            v-model="searchQuery"
-            clearable
-            density="compact"
-            hide-details
-            placeholder="搜索文本"
-            single-line
-            variant="outlined"
-            @keydown.enter.prevent="findNext"
-          />
-        </v-col>
-        <v-btn
-          density="compact"
-          icon="$prev"
-          size="x-small"
-          variant="text"
-          @click.stop="findPrevious"
+    <div
+      v-if="searchVisible"
+      class="px-2 py-1"
+      style="flex: 0 0 auto; border-bottom: 1px solid var(--app-border)"
+    >
+      <div class="d-flex align-center ga-1" style="margin: 0">
+        <a-input
+          ref="searchField"
+          v-model:value="searchQuery"
+          allow-clear
+          placeholder="搜索文本"
+          size="small"
+          @keydown.enter.prevent="findNext"
         />
-        <v-btn
-          density="compact"
-          icon="$next"
-          size="x-small"
-          variant="text"
-          @click.stop="findNext"
-        />
-      </v-row>
+        <a-button size="small" type="text" @click.stop="findPrevious">
+          <template #icon>
+            <LeftOutlined />
+          </template>
+        </a-button>
+        <a-button size="small" type="text" @click.stop="findNext">
+          <template #icon>
+            <RightOutlined />
+          </template>
+        </a-button>
+      </div>
     </div>
 
-    <v-divider />
-
-    <v-card-text class="pa-2" style="flex: 1; min-height: 0; overflow: hidden">
+    <div class="pa-2" style="flex: 1; min-height: 0; overflow: hidden">
       <textarea
         ref="textarea"
         v-model="model"
+        class="app-textarea"
         placeholder='粘贴需要处理的 JSON，例如：{ "name": "tool" }'
-        style="
-          width: 100%;
-          height: 100%;
-          resize: none;
-          border: none;
-          outline: none;
-          background: transparent;
-          font-family: inherit;
-          font-size: inherit;
-          line-height: inherit;
-          color: inherit;
-        "
       />
-    </v-card-text>
-  </v-card>
+    </div>
+  </section>
 </template>

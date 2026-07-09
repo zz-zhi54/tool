@@ -2,16 +2,21 @@
 import { computed, onBeforeUnmount, onMounted, ref } from "vue";
 
 import {
+  ClockCircleOutlined,
+  CopyOutlined,
+  DeleteOutlined,
+} from "@ant-design/icons-vue";
+
+import {
   type CurrentTime,
   getCurrentTime,
   parseTimestamp,
 } from "../../tools/timestamp/timestampConverter";
+import { showError, showInfo, showSuccess } from "../../composables/useMessage";
 
 const input = ref("");
 const currentTime = ref<CurrentTime>(getCurrentTime());
 const result = ref<ReturnType<typeof parseTimestamp>>(null);
-const snackbar = ref(false);
-const snackbarText = ref("");
 let timerId: ReturnType<typeof setInterval> | null = null;
 
 const hasInput = computed(() => input.value.trim().length > 0);
@@ -44,13 +49,13 @@ function handleConvert() {
   const parsed = parseTimestamp(input.value);
 
   if (!parsed) {
-    showMessage("无法解析输入，请检查格式");
+    showError("无法解析输入，请检查格式");
     result.value = null;
     return;
   }
 
   result.value = parsed;
-  showMessage("转换完成");
+  showSuccess("转换完成");
 }
 
 /**
@@ -66,7 +71,7 @@ function handleFillCurrent() {
  */
 async function handleCopyField(value: string) {
   await navigator.clipboard.writeText(value);
-  showMessage("已复制");
+  showInfo("已复制");
 }
 
 /**
@@ -75,12 +80,7 @@ async function handleCopyField(value: string) {
 function handleClear() {
   input.value = "";
   result.value = null;
-  showMessage("已清空");
-}
-
-function showMessage(message: string) {
-  snackbarText.value = message;
-  snackbar.value = true;
+  showInfo("已清空");
 }
 </script>
 
@@ -89,76 +89,80 @@ function showMessage(message: string) {
     class="d-flex flex-column ga-2 h-100"
     style="min-height: 0; overflow: hidden"
   >
-    <v-toolbar border density="compact" flat rounded style="flex: 0 0 auto">
-      <v-toolbar-title class="text-body-2 font-weight-medium">
-        时间戳转换
-      </v-toolbar-title>
+    <header
+      class="d-flex align-center ga-1 px-2 py-1"
+      style="
+        flex: 0 0 auto;
+        gap: 4px;
+        border: 1px solid var(--app-border);
+        border-radius: 4px;
+        background-color: var(--app-surface);
+      "
+    >
+      <span class="text-body-2 font-weight-medium">时间戳转换</span>
 
       <!-- 当前实时时钟 -->
-      <v-chip class="mr-1" color="info" label size="x-small" variant="tonal">
-        {{ currentTime.localTime }}
-      </v-chip>
+      <a-tag color="blue" size="small">{{ currentTime.localTime }}</a-tag>
 
-      <v-chip
-        class="mr-2"
-        color="secondary"
-        label
-        size="x-small"
-        variant="tonal"
-      >
-        {{ currentTime.timestampSeconds }}
-      </v-chip>
+      <a-tag color="cyan" size="small">{{
+        currentTime.timestampSeconds
+      }}</a-tag>
 
-      <div class="d-flex align-center ga-1">
-        <v-btn
-          color="primary"
-          density="compact"
-          prepend-icon="$calendar"
-          size="small"
-          text="获取当前时间"
-          variant="tonal"
-          @click="handleFillCurrent"
-        />
-      </div>
-    </v-toolbar>
+      <span style="flex: 1 1 auto" />
+
+      <a-button size="small" type="primary" ghost @click="handleFillCurrent">
+        <template #icon>
+          <ClockCircleOutlined />
+        </template>
+        获取当前时间
+      </a-button>
+    </header>
 
     <!-- 输入区域 -->
-    <v-card border density="compact" flat rounded style="flex: 0 0 auto">
-      <v-card-text class="d-flex align-center ga-2 py-2 px-3">
-        <v-text-field
-          v-model="input"
-          density="compact"
-          hide-details
-          placeholder="输入时间戳（如 1718179200）或日期字符串（如 2024-06-12）"
-          variant="outlined"
-          @keydown.enter="handleConvert"
-        />
-        <v-btn
-          color="primary"
-          density="compact"
-          :disabled="!hasInput"
-          size="small"
-          text="转换"
-          variant="tonal"
-          @click="handleConvert"
-        />
-        <v-btn
-          color="warning"
-          density="compact"
-          :disabled="!hasInput && !result"
-          size="small"
-          text="清空"
-          variant="text"
-          @click="handleClear"
-        />
-      </v-card-text>
-    </v-card>
+    <section
+      class="d-flex align-center ga-2 px-3 py-2"
+      style="
+        flex: 0 0 auto;
+        border: 1px solid var(--app-border);
+        border-radius: 4px;
+        background-color: var(--app-surface);
+      "
+    >
+      <a-input
+        v-model:value="input"
+        placeholder="输入时间戳（如 1718179200）或日期字符串（如 2024-06-12）"
+        size="small"
+        style="flex: 1 1 auto"
+        @keydown.enter="handleConvert"
+      />
+      <a-button
+        :disabled="!hasInput"
+        size="small"
+        type="primary"
+        ghost
+        @click="handleConvert"
+      >
+        转换
+      </a-button>
+      <a-button
+        :disabled="!hasInput && !result"
+        size="small"
+        type="default"
+        ghost
+        @click="handleClear"
+      >
+        <template #icon>
+          <DeleteOutlined />
+        </template>
+        清空
+      </a-button>
+    </section>
 
     <!-- 结果区域 -->
     <div style="flex: 1 1 auto; min-height: 0; overflow: auto">
       <!-- 转换结果 -->
       <template v-if="result">
-        <v-card
+        <section
           v-for="field in [
             {
               label: 'Unix 时间戳（秒）',
@@ -174,44 +178,44 @@ function showMessage(message: string) {
             { label: '相对时间', value: result.relativeTime },
           ]"
           :key="field.label"
-          border="sm"
-          class="mb-2"
-          flat
-          rounded
+          class="d-flex align-center py-2 px-3 mb-2"
+          style="
+            border: 1px solid var(--app-border);
+            border-radius: 4px;
+            background-color: var(--app-surface);
+          "
         >
-          <v-card-text class="d-flex align-center py-2 px-3">
-            <span
-              class="text-caption text-medium-emphasis"
-              style="min-width: 140px"
-            >
-              {{ field.label }}
-            </span>
-            <span
-              class="text-body-2 font-weight-medium"
-              style="flex: 1; word-break: break-all"
-            >
-              {{ field.value }}
-            </span>
-            <v-btn
-              density="compact"
-              icon="$file"
-              size="x-small"
-              variant="text"
-              @click="handleCopyField(field.value)"
-            />
-          </v-card-text>
-        </v-card>
+          <span
+            class="text-caption"
+            style="min-width: 140px; color: var(--app-text-muted)"
+          >
+            {{ field.label }}
+          </span>
+          <span
+            class="text-body-2 font-weight-medium"
+            style="flex: 1; word-break: break-all"
+          >
+            {{ field.value }}
+          </span>
+          <a-button
+            size="small"
+            type="text"
+            @click="handleCopyField(field.value)"
+          >
+            <template #icon>
+              <CopyOutlined />
+            </template>
+          </a-button>
+        </section>
       </template>
 
       <!-- 无结果时的提示 -->
-      <v-alert v-else density="compact" type="info" variant="tonal">
-        输入时间戳或日期字符串，点击"转换"查看多种格式结果。支持秒级（10
-        位）和毫秒级（13 位）时间戳自动识别。
-      </v-alert>
+      <a-alert
+        v-else
+        type="info"
+        message="输入时间戳或日期字符串，点击「转换」查看多种格式结果。支持秒级（10 位）和毫秒级（13 位）时间戳自动识别。"
+        show-icon
+      />
     </div>
-
-    <v-snackbar v-model="snackbar" timeout="2000">
-      {{ snackbarText }}
-    </v-snackbar>
   </div>
 </template>

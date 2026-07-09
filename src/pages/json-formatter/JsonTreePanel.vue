@@ -1,6 +1,8 @@
 <script setup lang="ts">
 import { computed, nextTick, ref, useTemplateRef, watch } from "vue";
 
+import { ApartmentOutlined, SearchOutlined } from "@ant-design/icons-vue";
+
 import type { JsonValue } from "../../tools/json/jsonTypes";
 
 interface JsonTreeNode {
@@ -15,7 +17,7 @@ const props = defineProps<{
   value?: JsonValue;
 }>();
 
-const openedNodes = ref<string[]>([]);
+const expandedKeys = ref<string[]>([]);
 const searchQuery = ref("");
 const searchVisible = ref(false);
 const searchFieldRef = useTemplateRef<HTMLElement>("searchField");
@@ -23,8 +25,8 @@ const searchFieldRef = useTemplateRef<HTMLElement>("searchField");
 /**
  * 树形视图数据。
  *
- * 这里把 JSON 对象/数组转换为 Vuetify v-treeview 可识别的 children 结构，
- * 用户折叠节点时只看到字段名和摘要，从而隐藏对应层级的 { 或 [ 结构符号。
+ * 把 JSON 对象/数组转换为 a-tree 可识别的 children 结构，
+ * 用户折叠节点时只看到字段名和摘要。
  */
 const allTreeItems = computed<JsonTreeNode[]>(() => {
   if (props.value === undefined) {
@@ -37,7 +39,7 @@ const allTreeItems = computed<JsonTreeNode[]>(() => {
 /**
  * 搜索后的树形视图数据。
  *
- * 搜索会保留命中节点的祖先路径，避免用户只看到孤立节点而不知道它在 JSON 中的位置。
+ * 保留命中节点的祖先路径，避免用户只看到孤立节点。
  */
 const treeItems = computed<JsonTreeNode[]>(() => {
   const keyword = searchQuery.value.trim().toLowerCase();
@@ -53,13 +55,11 @@ const treeItems = computed<JsonTreeNode[]>(() => {
 
 /**
  * JSON 结构变化或搜索关键字变化时默认展开树节点。
- *
- * 搜索时会展开所有命中节点的祖先路径，不搜索时保持默认全展开。
  */
 watch(
   () => [props.value, searchQuery.value],
   () => {
-    openedNodes.value = collectExpandableIds(treeItems.value);
+    expandedKeys.value = collectExpandableIds(treeItems.value);
   },
   { immediate: true },
 );
@@ -104,32 +104,20 @@ function createTreeNode(
   };
 }
 
-/**
- * 判断一个值是否是普通 JSON 对象。
- */
 function isJsonObject(value: JsonValue): value is { [key: string]: JsonValue } {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 
-/**
- * 获取基础 JSON 值的类型名称。
- */
 function getPrimitiveType(value: Exclude<JsonValue, JsonValue[] | object>) {
   return value === null ? "null" : typeof value;
 }
 
-/**
- * 格式化基础 JSON 值。
- */
 function formatPrimitiveValue(value: Exclude<JsonValue, JsonValue[] | object>) {
   return typeof value === "string" ? JSON.stringify(value) : String(value);
 }
 
 /**
  * 按关键字过滤树节点。
- *
- * 只要节点的字段名、类型摘要或基础值命中，就保留该节点；
- * 子节点命中时也会保留父节点，保持搜索结果完整路径。
  */
 function filterTreeNode(
   node: JsonTreeNode,
@@ -156,20 +144,18 @@ function filterTreeNode(
  * 展开所有对象和数组节点。
  */
 function expandAll() {
-  openedNodes.value = collectExpandableIds(treeItems.value);
+  expandedKeys.value = collectExpandableIds(treeItems.value);
 }
 
 /**
  * 折叠所有对象和数组节点。
  */
 function collapseAll() {
-  openedNodes.value = [];
+  expandedKeys.value = [];
 }
 
 /**
  * 切换搜索框可见性。
- *
- * 展开时自动聚焦输入框；收起时清空搜索关键字，回到完整树视图。
  */
 async function toggleSearch() {
   if (searchVisible.value) {
@@ -198,85 +184,94 @@ function collectExpandableIds(nodes: JsonTreeNode[]): string[] {
 </script>
 
 <template>
-  <v-card
-    border="sm"
+  <section
     class="d-flex flex-column"
-    flat
-    height="100%"
-    style="min-height: 0; overflow: hidden"
+    style="
+      height: 100%;
+      min-height: 0;
+      overflow: hidden;
+      border: 1px solid var(--app-border);
+      border-radius: 4px;
+      background-color: var(--app-surface);
+    "
   >
-    <v-card-title
+    <header
       class="d-flex align-center text-body-2 font-weight-medium px-2 py-1"
+      style="
+        flex: 0 0 auto;
+        gap: 4px;
+        border-bottom: 1px solid var(--app-border);
+      "
     >
-      <v-icon class="mr-1" icon="$subgroup" size="small" />
-      结构视图
-      <v-spacer />
-
-      <v-btn
-        class="mr-1"
-        density="compact"
-        icon="$search"
-        size="x-small"
-        variant="text"
-        @click.stop="toggleSearch"
+      <ApartmentOutlined
+        style="font-size: 14px; color: var(--app-text-muted)"
       />
+      结构视图
+      <span style="flex: 1 1 auto" />
 
-      <v-btn-group density="compact" variant="tonal">
-        <v-btn size="x-small" text="展开" @click.stop="expandAll" />
-        <v-btn size="x-small" text="折叠" @click.stop="collapseAll" />
-      </v-btn-group>
-    </v-card-title>
+      <a-button size="small" type="text" @click.stop="toggleSearch">
+        <template #icon>
+          <SearchOutlined />
+        </template>
+      </a-button>
 
-    <v-divider />
+      <a-space :size="4">
+        <a-button size="small" type="default" @click.stop="expandAll">
+          展开
+        </a-button>
+        <a-button size="small" type="default" @click.stop="collapseAll">
+          折叠
+        </a-button>
+      </a-space>
+    </header>
 
-    <div v-if="searchVisible" class="px-2 py-1">
-      <v-text-field
+    <div
+      v-if="searchVisible"
+      class="px-2 py-1"
+      style="flex: 0 0 auto; border-bottom: 1px solid var(--app-border)"
+    >
+      <a-input
         ref="searchField"
-        v-model="searchQuery"
-        clearable
-        density="compact"
-        hide-details
+        v-model:value="searchQuery"
+        allow-clear
         placeholder="搜索字段或值"
-        single-line
-        variant="outlined"
+        size="small"
       />
     </div>
 
-    <v-divider v-if="searchVisible" />
-
-    <v-card-text class="pa-2" style="flex: 1; min-height: 0; overflow: auto">
-      <v-alert
+    <div class="pa-2" style="flex: 1; min-height: 0; overflow: auto">
+      <a-empty
         v-if="treeItems.length === 0"
-        density="compact"
-        type="info"
-        variant="tonal"
+        description="粘贴合法 JSON 后，结构视图会自动生成并默认展开。"
+        :image="undefined"
       >
-        粘贴合法 JSON 后，结构视图会自动生成并默认展开。
-      </v-alert>
+        <template #image>
+          <span />
+        </template>
+      </a-empty>
 
-      <v-treeview
+      <a-tree
         v-else
-        v-model:opened="openedNodes"
-        :items="treeItems"
-        density="compact"
-        item-children="children"
-        item-title="label"
-        item-value="id"
-        open-on-click
+        v-model:expanded-keys="expandedKeys"
+        :tree-data="treeItems"
+        :field-names="{ key: 'id', title: 'label', children: 'children' }"
+        :block-node="true"
+        :selectable="false"
+        :show-line="false"
+        :virtual="false"
       >
-        <template #title="{ item }">
-          <span class="text-body-2 font-weight-medium">{{ item.label }}</span>
-          <v-chip class="ml-1" size="x-small" variant="tonal">
-            {{ item.type }}
-          </v-chip>
+        <template #title="{ label, type, value }">
+          <span class="text-body-2 font-weight-medium">{{ label }}</span>
+          <a-tag class="ml-1" size="small">{{ type }}</a-tag>
           <span
-            v-if="item.value"
-            class="ml-1 text-caption text-medium-emphasis"
+            v-if="value"
+            class="ml-1 text-caption"
+            style="color: var(--app-text-muted)"
           >
-            {{ item.value }}
+            {{ value }}
           </span>
         </template>
-      </v-treeview>
-    </v-card-text>
-  </v-card>
+      </a-tree>
+    </div>
+  </section>
 </template>

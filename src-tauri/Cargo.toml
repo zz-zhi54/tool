@@ -1,9 +1,10 @@
 [package]
 name = "tool"
 version = "0.1.0"
-description = "A Tauri App"
-authors = ["you"]
+description = "Tool Workbench - 基于 Tauri 2 + Vue 3 + TypeScript 的桌面工具箱"
+authors = ["zz_zhi <zz_zhi@outlook.com>"]
 edition = "2021"
+license = "Apache-2.0"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 

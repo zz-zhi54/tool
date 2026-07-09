@@ -11,9 +11,19 @@
 export const PANEL_KEYS = {
   jsonFormatter: "json-formatter:panel-percent",
   yamlFormatter: "yaml-formatter:panel-percent",
+  xmlFormatter: "xml-formatter:panel-percent",
+  tomlFormatter: "toml-formatter:panel-percent",
   base64Codec: "base64-codec:panel-percent",
+  urlCodec: "url-codec:panel-percent",
+  hexCodec: "hex-codec:panel-percent",
+  htmlEntityCodec: "html-entity-codec:panel-percent",
+  unicodeCodec: "unicode-escape:panel-percent",
   regexTester: "regex-tester:panel-percent",
   sqlGenerator: "sql-generator:panel-percent",
+  escapeTool: "escape-tool:panel-percent",
+  textDiff: "text-diff:panel-percent",
+  caseConverter: "case-converter:panel-percent",
+  lineOps: "line-ops:panel-percent",
 } as const;
 
 export const REGEX_FLAGS_KEY = "regex-tester:flags";
@@ -41,7 +51,22 @@ export function remove(key: string): void {
 
 // ── 设置页元数据 ──────────────────────────────────────
 
-export type SettingGroup = "layout" | "regexTester" | "sqlGenerator";
+export type SettingGroup =
+  | "layout"
+  | "layout-data-format"
+  | "layout-encoding"
+  | "layout-time"
+  | "layout-text"
+  | "regexTester"
+  | "sqlGenerator";
+
+export interface SettingGroupMeta {
+  id: SettingGroup;
+  title: string;
+  description: string;
+  /** 父级分组 ID（用于嵌套渲染） */
+  parent?: SettingGroup;
+}
 
 export interface SettingMeta {
   key: string;
@@ -85,47 +110,40 @@ const SLIDER = {
   suffix: "%",
 };
 
+const LAYOUT_ENTRY = (
+  key: string,
+  label: string,
+  group: SettingGroup = "layout",
+  defaultValue = 40,
+): SettingMeta => ({
+  key,
+  label,
+  description: "输入面板宽度",
+  group,
+  defaultValue,
+  control: SLIDER,
+});
+
 export const SETTINGS: SettingMeta[] = [
-  {
-    key: PANEL_KEYS.jsonFormatter,
-    label: "JSON 格式化",
-    description: "输入面板宽度",
-    group: "layout",
-    defaultValue: 40,
-    control: SLIDER,
-  },
-  {
-    key: PANEL_KEYS.yamlFormatter,
-    label: "YAML 格式化",
-    description: "输入面板宽度",
-    group: "layout",
-    defaultValue: 40,
-    control: SLIDER,
-  },
-  {
-    key: PANEL_KEYS.base64Codec,
-    label: "Base64 编解码",
-    description: "输入面板宽度",
-    group: "layout",
-    defaultValue: 40,
-    control: SLIDER,
-  },
-  {
-    key: PANEL_KEYS.regexTester,
-    label: "正则测试",
-    description: "输入面板宽度",
-    group: "layout",
-    defaultValue: 40,
-    control: SLIDER,
-  },
-  {
-    key: PANEL_KEYS.sqlGenerator,
-    label: "SQL IN 生成器",
-    description: "输入面板宽度",
-    group: "layout",
-    defaultValue: 40,
-    control: SLIDER,
-  },
+  LAYOUT_ENTRY(PANEL_KEYS.jsonFormatter, "JSON 格式化", "layout-data-format"),
+  LAYOUT_ENTRY(PANEL_KEYS.yamlFormatter, "YAML 格式化", "layout-data-format"),
+  LAYOUT_ENTRY(PANEL_KEYS.xmlFormatter, "XML 格式化", "layout-data-format"),
+  LAYOUT_ENTRY(PANEL_KEYS.tomlFormatter, "TOML 格式化", "layout-data-format"),
+  LAYOUT_ENTRY(PANEL_KEYS.base64Codec, "Base64 编解码", "layout-encoding"),
+  LAYOUT_ENTRY(PANEL_KEYS.urlCodec, "URL 编解码", "layout-encoding"),
+  LAYOUT_ENTRY(PANEL_KEYS.hexCodec, "Hex 编解码", "layout-encoding"),
+  LAYOUT_ENTRY(
+    PANEL_KEYS.htmlEntityCodec,
+    "HTML 实体编解码",
+    "layout-encoding",
+  ),
+  LAYOUT_ENTRY(PANEL_KEYS.unicodeCodec, "Unicode 转义", "layout-encoding"),
+  LAYOUT_ENTRY(PANEL_KEYS.regexTester, "正则测试", "layout-text"),
+  LAYOUT_ENTRY(PANEL_KEYS.sqlGenerator, "SQL IN 生成器", "layout-text"),
+  LAYOUT_ENTRY(PANEL_KEYS.escapeTool, "转义工具", "layout-text"),
+  LAYOUT_ENTRY(PANEL_KEYS.textDiff, "文本 Diff", "layout-text"),
+  LAYOUT_ENTRY(PANEL_KEYS.caseConverter, "大小写转换", "layout-text"),
+  LAYOUT_ENTRY(PANEL_KEYS.lineOps, "行处理", "layout-text"),
   {
     key: REGEX_FLAGS_KEY,
     label: "默认正则标志",
@@ -159,15 +177,37 @@ export const SETTINGS: SettingMeta[] = [
   },
 ];
 
-export const SETTING_GROUPS: {
-  id: SettingGroup;
-  title: string;
-  description: string;
-}[] = [
+export const SETTING_GROUPS: SettingGroupMeta[] = [
   {
     id: "layout",
     title: "界面布局",
     description: "各工具左右工作区的默认宽度比例。",
+  },
+  {
+    id: "layout-data-format",
+    title: "数据格式",
+    description: "JSON / YAML / XML / TOML 格式化器的左右分栏宽度。",
+    parent: "layout",
+  },
+  {
+    id: "layout-encoding",
+    title: "编码转换",
+    description:
+      "Base64 / URL / Hex / HTML 实体 / Unicode 编解码的左右分栏宽度。",
+    parent: "layout",
+  },
+  {
+    id: "layout-time",
+    title: "时间工具",
+    description:
+      "暂无布局设置（时间戳转换 / 时区转换 / 日期计算器不使用 SplitPanel）。",
+    parent: "layout",
+  },
+  {
+    id: "layout-text",
+    title: "文本工具",
+    description: "正则 / SQL / 转义 / Diff / 大小写 / 行处理的左右分栏宽度。",
+    parent: "layout",
   },
   {
     id: "regexTester",

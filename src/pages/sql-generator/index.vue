@@ -3,14 +3,17 @@ import { computed, ref, watch } from "vue";
 
 import PanelCard from "../../components/PanelCard.vue";
 import SplitPanel from "../../components/SplitPanel.vue";
+import {
+  showInfo,
+  showSuccess,
+  showWarning,
+} from "../../composables/useMessage";
 import { generateSqlIn } from "../../tools/sql-in/sqlInGenerator";
 import { load, save, SQL_QUOTE_KEY, PANEL_KEYS } from "../../utils/storage";
 import type { SqlQuoteStyle } from "../../utils/storage";
 
 const input = ref("");
 const output = ref("");
-const snackbar = ref(false);
-const snackbarText = ref("");
 const quote = ref<SqlQuoteStyle>(load(SQL_QUOTE_KEY, '"'));
 
 const hasInput = computed(() => input.value.trim().length > 0);
@@ -45,12 +48,12 @@ function handleGenerate() {
   const result = generateSqlIn(input.value, quote.value);
 
   if (result.count === 0) {
-    showMessage("未检测到有效数据行");
+    showWarning("未检测到有效数据行");
     return;
   }
 
   output.value = result.sql;
-  showMessage(`已生成 IN 语句，包含 ${result.count} 个值`);
+  showSuccess(`已生成 IN 语句，包含 ${result.count} 个值`);
 }
 
 /**
@@ -62,7 +65,7 @@ async function handleCopyOutput() {
   }
 
   await navigator.clipboard.writeText(output.value);
-  showMessage("输出已复制");
+  showSuccess("输出已复制");
 }
 
 /**
@@ -71,12 +74,7 @@ async function handleCopyOutput() {
 function handleClear() {
   input.value = "";
   output.value = "";
-  showMessage("已清空");
-}
-
-function showMessage(message: string) {
-  snackbarText.value = message;
-  snackbar.value = true;
+  showInfo("已清空");
 }
 </script>
 
@@ -85,118 +83,88 @@ function showMessage(message: string) {
     class="d-flex flex-column ga-2 h-100"
     style="min-height: 0; overflow: hidden"
   >
-    <v-toolbar border density="compact" flat rounded style="flex: 0 0 auto">
-      <v-toolbar-title class="text-body-2 font-weight-medium">
-        SQL IN 生成器
-      </v-toolbar-title>
+    <header
+      class="d-flex align-center ga-1 px-2 py-1"
+      style="
+        flex: 0 0 auto;
+        gap: 4px;
+        border: 1px solid var(--app-border);
+        border-radius: 4px;
+        background-color: var(--app-surface);
+      "
+    >
+      <span class="text-body-2 font-weight-medium">SQL IN 生成器</span>
 
-      <v-chip
-        :color="lineCount > 0 ? 'success' : 'info'"
-        class="mr-1"
-        label
-        size="x-small"
-        variant="tonal"
-      >
+      <a-tag :color="lineCount > 0 ? 'green' : 'default'" size="small">
         {{ lineCount > 0 ? `${lineCount} 行数据` : "等待输入" }}
-      </v-chip>
+      </a-tag>
 
       <!-- 引号风格切换 -->
-      <v-btn-toggle
-        v-model="quote"
-        class="mr-1"
-        density="compact"
-        mandatory
-        variant="outlined"
+      <a-radio-group
+        v-model:value="quote"
+        size="small"
+        option-type="button"
+        button-style="outline"
       >
-        <v-btn size="small" text='""' value='"' />
-        <v-btn size="small" text="''" value="'" />
-      </v-btn-toggle>
+        <a-radio-button value='"'>""</a-radio-button>
+        <a-radio-button value="'">''</a-radio-button>
+      </a-radio-group>
 
-      <!-- 操作按钮 -->
-      <div class="d-flex align-center ga-1">
-        <v-btn
-          color="primary"
-          density="compact"
-          prepend-icon="$next"
-          :disabled="!hasInput"
-          size="small"
-          text="生成"
-          variant="tonal"
-          @click="handleGenerate"
-        />
+      <span style="flex: 1 1 auto" />
 
-        <v-btn
-          color="success"
-          density="compact"
-          prepend-icon="$file"
-          :disabled="!hasOutput"
-          size="small"
-          text="复制输出"
-          variant="tonal"
-          @click="handleCopyOutput"
-        />
+      <a-button
+        :disabled="!hasInput"
+        size="small"
+        type="primary"
+        ghost
+        @click="handleGenerate"
+      >
+        生成
+      </a-button>
 
-        <v-btn
-          color="warning"
-          density="compact"
-          prepend-icon="$clear"
-          :disabled="!hasInput && !hasOutput"
-          size="small"
-          text="清空"
-          variant="text"
-          @click="handleClear"
-        />
-      </div>
-    </v-toolbar>
+      <a-button
+        :disabled="!hasOutput"
+        size="small"
+        type="primary"
+        ghost
+        @click="handleCopyOutput"
+      >
+        复制输出
+      </a-button>
+
+      <a-button
+        :disabled="!hasInput && !hasOutput"
+        size="small"
+        type="default"
+        ghost
+        @click="handleClear"
+      >
+        清空
+      </a-button>
+    </header>
 
     <!-- 工作区：左右面板比例持久化到 localStorage -->
     <SplitPanel :panel-key="PANEL_KEYS.sqlGenerator">
       <template #left>
-        <PanelCard icon="$file" title="输入数据（每行一个值）">
+        <PanelCard icon="FileTextOutlined" title="输入数据（每行一个值）">
           <textarea
             v-model="input"
+            class="app-textarea"
             placeholder="粘贴数据，每行一个值，例如：&#10;OGZJAL25110009&#10;OCDS25110025&#10;OWSD25080005"
-            style="
-              width: 100%;
-              height: 100%;
-              resize: none;
-              border: none;
-              outline: none;
-              background: transparent;
-              font-family: inherit;
-              font-size: inherit;
-              line-height: inherit;
-              color: inherit;
-            "
           />
         </PanelCard>
       </template>
 
       <template #right>
-        <PanelCard icon="$next" title="SQL IN 语句">
+        <PanelCard icon="RightOutlined" title="SQL IN 语句">
           <textarea
             :value="output"
+            class="app-textarea"
             readonly
             placeholder="生成的 IN 语句将显示在这里"
-            style="
-              width: 100%;
-              height: 100%;
-              resize: none;
-              border: none;
-              outline: none;
-              background: transparent;
-              font-family: inherit;
-              font-size: inherit;
-              line-height: inherit;
-              color: inherit;
-            "
           />
         </PanelCard>
       </template>
     </SplitPanel>
-
-    <v-snackbar v-model="snackbar" timeout="2000">
-      {{ snackbarText }}
-    </v-snackbar>
   </div>
 </template>

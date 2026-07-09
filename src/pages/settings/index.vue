@@ -1,6 +1,10 @@
 <script setup lang="ts">
 import { computed, ref } from "vue";
 
+import { ReloadOutlined } from "@ant-design/icons-vue";
+
+import SettingItem from "../../components/SettingItem.vue";
+import { showInfo } from "../../composables/useMessage";
 import {
   getSettings,
   remove,
@@ -12,19 +16,41 @@ import type {
   RegexFlag,
   RegexFlagsPreference,
   SqlQuoteStyle,
+  SettingGroupMeta,
   SettingSnapshot,
 } from "../../utils/storage";
 
-const snackbar = ref(false);
-const snackbarText = ref("");
-
 const items = ref<SettingSnapshot[]>(getSettings());
 
-const grouped = computed(() =>
-  SETTING_GROUPS.map((g) => ({
-    ...g,
-    items: items.value.filter((item) => item.group === g.id),
-  })).filter((g) => g.items.length > 0),
+/**
+ * 分组后的设置项：每个顶层分组下挂项或子分组。
+ *
+ * - 顶层分组：无 parent 的 SETTING_GROUPS 条目。
+ * - 布局类（layout）：item 挂在子分组上（数据格式/编码/时间/文本），
+ *   顶层组只作为容器和说明。
+ * - 工具类（regexTester / sqlGenerator）：item 直接挂在顶层组上。
+ * - 没有项目的子分组自动隐藏。
+ */
+interface GroupedSetting {
+  meta: SettingGroupMeta;
+  items: SettingSnapshot[];
+  children: { meta: SettingGroupMeta; items: SettingSnapshot[] }[];
+}
+
+const grouped = computed<GroupedSetting[]>(() =>
+  SETTING_GROUPS.filter((g) => !g.parent)
+    .map((top) => {
+      const directItems = items.value.filter((item) => item.group === top.id);
+      const children = SETTING_GROUPS.filter((s) => s.parent === top.id)
+        .map((sub) => ({
+          meta: sub,
+          items: items.value.filter((item) => item.group === sub.id),
+        }))
+        .filter((sub) => sub.items.length > 0);
+      return { meta: top, items: directItems, children };
+    })
+    // 隐藏空组（既无直接项又无子分组）
+    .filter((g) => g.items.length > 0 || g.children.length > 0),
 );
 
 function refresh() {
@@ -42,12 +68,12 @@ function onSlider(key: string, value: number) {
   refresh();
 }
 
-function onToggle(key: string, value: string) {
-  save(key, value as SqlQuoteStyle);
+function onToggle(key: string, value: string | number) {
+  save(key, String(value) as SqlQuoteStyle);
   refresh();
 }
 
-function onCheckbox(key: string, flag: string, checked: boolean | null) {
+function onCheckbox(key: string, flag: string, checked: boolean) {
   const snap = getSnapshot(key);
   save(key, {
     ...(snap.value as RegexFlagsPreference),
@@ -56,21 +82,32 @@ function onCheckbox(key: string, flag: string, checked: boolean | null) {
   refresh();
 }
 
+/**
+ * SettingItem 的统一 change 事件入口。
+ * - slider / toggle：args = [value]
+ * - checkbox：       args = [flag, checked]
+ */
+function onItemChange(snap: SettingSnapshot, ...args: unknown[]) {
+  if (snap.control.type === "checkboxes") {
+    const [flag, checked] = args;
+    onCheckbox(snap.key, String(flag), Boolean(checked));
+  } else if (snap.control.type === "toggle") {
+    onToggle(snap.key, args[0] as string | number);
+  } else {
+    onSlider(snap.key, Number(args[0]));
+  }
+}
+
 function resetItem(snap: SettingSnapshot) {
   remove(snap.key);
   refresh();
-  showMessage(`${snap.label} 已重置为默认值`);
+  showInfo(`${snap.label} 已重置为默认值`);
 }
 
 function resetAll() {
   for (const meta of SETTINGS) remove(meta.key);
   refresh();
-  showMessage("所有设置已重置为默认值");
-}
-
-function showMessage(msg: string) {
-  snackbarText.value = msg;
-  snackbar.value = true;
+  showInfo("所有设置已重置为默认值");
 }
 </script>
 
@@ -79,129 +116,92 @@ function showMessage(msg: string) {
     class="d-flex flex-column ga-2 h-100"
     style="min-height: 0; overflow: hidden"
   >
-    <v-toolbar border density="compact" flat rounded style="flex: 0 0 auto">
-      <v-toolbar-title class="text-body-2 font-weight-medium"
-        >设置</v-toolbar-title
-      >
-      <v-spacer />
-      <v-btn
-        color="warning"
-        density="compact"
-        prepend-icon="$refresh"
-        size="small"
-        text="重置全部"
-        variant="text"
-        @click="resetAll"
-      />
-    </v-toolbar>
+    <header
+      class="d-flex align-center px-2 py-1"
+      style="
+        flex: 0 0 auto;
+        border: 1px solid var(--app-border);
+        border-radius: 4px;
+        background-color: var(--app-surface);
+        gap: 8px;
+      "
+    >
+      <span class="text-body-2 font-weight-medium">设置</span>
+      <span style="flex: 1 1 auto" />
+      <a-button size="small" type="default" ghost @click="resetAll">
+        <template #icon>
+          <ReloadOutlined />
+        </template>
+        重置全部
+      </a-button>
+    </header>
 
     <div
       class="d-flex flex-column ga-3"
       style="flex: 1 1 auto; min-height: 0; overflow: auto"
     >
-      <v-card v-for="group in grouped" :key="group.id" border flat rounded>
-        <v-card-item :subtitle="group.description" :title="group.title" />
-        <v-divider />
-        <v-card-text class="d-flex flex-column ga-4">
-          <div
-            v-for="snap in group.items"
-            :key="snap.key"
-            class="d-flex align-center ga-3 flex-wrap"
-          >
-            <!-- 标签 -->
-            <div style="min-width: 150px; flex: 0 0 150px">
-              <div class="text-body-2 font-weight-medium">{{ snap.label }}</div>
-              <div
-                v-if="snap.description"
-                class="text-caption text-medium-emphasis"
-              >
-                {{ snap.description }}
-              </div>
-            </div>
+      <section
+        v-for="group in grouped"
+        :key="group.meta.id"
+        style="
+          border: 1px solid var(--app-border);
+          border-radius: 4px;
+          background-color: var(--app-surface);
+        "
+      >
+        <header
+          class="px-3 py-2"
+          style="border-bottom: 1px solid var(--app-border)"
+        >
+          <div class="text-body-2 font-weight-medium">
+            {{ group.meta.title }}
+          </div>
+          <div class="text-caption" style="color: var(--app-text-muted)">
+            {{ group.meta.description }}
+          </div>
+        </header>
 
-            <!-- 控件 -->
-            <div style="min-width: 220px; flex: 1 1 260px">
-              <v-slider
-                v-if="snap.control.type === 'slider'"
-                :model-value="snap.value as number"
-                :min="snap.control.min"
-                :max="snap.control.max"
-                :step="snap.control.step"
-                density="compact"
-                hide-details
-                thumb-label
-                @update:model-value="(v: number) => onSlider(snap.key, v)"
-              />
-
-              <v-btn-toggle
-                v-else-if="snap.control.type === 'toggle'"
-                :model-value="snap.value as string"
-                density="compact"
-                mandatory
-                variant="outlined"
-                @update:model-value="(v: string) => onToggle(snap.key, v)"
-              >
-                <v-btn
-                  v-for="opt in snap.control.options"
-                  :key="opt.value"
-                  size="small"
-                  :text="opt.title"
-                  :value="opt.value"
-                />
-              </v-btn-toggle>
-
-              <div v-else class="d-flex ga-2 flex-wrap">
-                <v-checkbox-btn
-                  v-for="opt in snap.control.options"
-                  :key="opt.value"
-                  :model-value="
-                    (snap.value as RegexFlagsPreference)[opt.value as RegexFlag]
-                  "
-                  :label="opt.title"
-                  :title="opt.description"
-                  density="compact"
-                  hide-details
-                  @update:model-value="
-                    (v: boolean | null) => onCheckbox(snap.key, opt.value, v)
-                  "
-                />
-              </div>
-            </div>
-
-            <!-- 当前值/默认值 -->
-            <div class="d-flex align-center ga-1" style="flex: 0 0 auto">
-              <v-chip color="primary" label size="x-small" variant="tonal">
-                当前：{{ snap.display }}
-              </v-chip>
-              <v-chip label size="x-small" variant="outlined">
-                默认：{{ snap.defaultDisplay }}
-              </v-chip>
-              <v-chip
-                v-if="!snap.isDefault"
-                color="warning"
-                label
-                size="x-small"
-                variant="tonal"
-              >
-                已自定义
-              </v-chip>
-            </div>
-
-            <v-btn
-              :disabled="snap.isDefault"
-              density="compact"
-              icon="$refresh"
-              size="x-small"
-              variant="text"
-              @click="resetItem(snap)"
+        <div class="d-flex flex-column ga-3 px-3 py-3">
+          <!-- 直接挂在顶层下的项（regexTester / sqlGenerator 用） -->
+          <div v-if="group.items.length > 0" class="d-flex flex-column ga-2">
+            <SettingItem
+              v-for="snap in group.items"
+              :key="snap.key"
+              :snap="snap"
+              @change="onItemChange"
+              @reset="resetItem"
             />
           </div>
-        </v-card-text>
-      </v-card>
-    </div>
 
-    <v-snackbar v-model="snackbar" timeout="2000">{{
-      snackbarText
-    }}</v-snackbar>
+          <!-- 子分组项（layout 类用：数据格式 / 编码 / 时间 / 文本） -->
+          <div
+            v-for="sub in group.children"
+            :key="sub.meta.id"
+            class="d-flex flex-column ga-2"
+          >
+            <div
+              class="text-body-2"
+              style="color: var(--app-text-muted); margin-top: 4px"
+            >
+              {{ sub.meta.title }}
+            </div>
+            <div
+              v-if="sub.meta.description"
+              class="text-caption"
+              style="color: var(--app-text-muted); margin-bottom: 4px"
+            >
+              {{ sub.meta.description }}
+            </div>
+            <SettingItem
+              v-for="snap in sub.items"
+              :key="snap.key"
+              :snap="snap"
+              @change="onItemChange"
+              @reset="resetItem"
+            />
+          </div>
+        </div>
+      </section>
+    </div>
   </div>
 </template>

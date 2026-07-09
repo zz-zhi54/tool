@@ -12,7 +12,10 @@
   "app": {
     "windows": [
       {
-        "title": "tool",
+        "label": "main",
+        "title": "",
+        "titleBarStyle": "Overlay",
+        "hiddenTitle": true,
         "width": 1200,
         "height": 800
       }

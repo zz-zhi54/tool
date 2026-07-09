@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import { getIconByName } from "../utils/icons";
+
 /**
  * 面板卡片壳组件。
  *
@@ -12,40 +14,52 @@ withDefaults(
   defineProps<{
     /** 标题栏文字 */
     title: string;
-    /** 标题栏左侧图标，默认 $file */
+    /** 标题栏左侧图标，默认 FileTextOutlined */
     icon?: string;
     /** 内容区 overflow 行为，默认 hidden */
     overflow?: "hidden" | "auto";
   }>(),
   {
-    icon: "$file",
+    icon: "FileTextOutlined",
     overflow: "hidden",
   },
 );
 </script>
 
 <template>
-  <v-card
-    border="sm"
+  <section
     class="d-flex flex-column"
-    flat
-    height="100%"
-    style="min-height: 0; overflow: hidden"
+    style="
+      height: 100%;
+      min-height: 0;
+      overflow: hidden;
+      border: 1px solid var(--app-border);
+      border-radius: 4px;
+      background-color: var(--app-surface);
+    "
   >
-    <v-card-title
+    <header
       class="d-flex align-center text-body-2 font-weight-medium px-2 py-1"
+      style="
+        flex: 0 0 auto;
+        gap: 4px;
+        border-bottom: 1px solid var(--app-border);
+      "
     >
-      <v-icon class="mr-1" :icon="icon" size="small" />
+      <component
+        :is="getIconByName(icon)"
+        v-if="icon"
+        style="font-size: 14px; color: var(--app-text-muted)"
+      />
       {{ title }}
-      <v-spacer />
+      <!-- 占位替代 v-spacer -->
+      <span style="flex: 1 1 auto" />
       <!-- 标题栏右侧操作区（搜索按钮等） -->
       <slot name="actions" />
-    </v-card-title>
+    </header>
 
-    <v-divider />
-
-    <v-card-text class="pa-2" :style="{ flex: 1, minHeight: 0, overflow }">
+    <div class="pa-2" :style="{ flex: 1, minHeight: 0, overflow }">
       <slot />
-    </v-card-text>
-  </v-card>
+    </div>
+  </section>
 </template>

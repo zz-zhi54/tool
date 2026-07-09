@@ -1,89 +1,92 @@
 <script setup lang="ts">
-import { computed } from "vue";
-import { useTheme } from "vuetify";
-import type { ToolDefinition } from "../types/tool";
+import { onBeforeUnmount, onMounted, ref } from "vue";
 
-defineProps<{
+import type { ToolDefinition } from "../types/tool";
+import { useAppTheme } from "../composables/useAppTheme";
+import { bindWindowDrag } from "../composables/useWindowDrag";
+
+const props = defineProps<{
   currentTool: ToolDefinition;
 }>();
 
-// ── 主题切换 ──────────────────────────────────────────────
+// ── 主题 store（仍需要，但 UI 已搬到 AppNavigation） ─────
 
-type BuiltInThemeName = "system" | "light" | "dark";
+const themeStore = useAppTheme();
 
-const theme = useTheme();
+// ── 窗口 drag 绑定 ───────────────────────────────────────
 
-/**
- * 主题菜单选项。
- *
- * 只暴露 Vuetify 内置主题，不维护自定义主题名或自定义颜色，
- * 保证整个应用的外观策略都由 Vuetify 主题系统接管。
- */
-const themeOptions: Array<{
-  title: string;
-  value: BuiltInThemeName;
-  icon: string;
-}> = [
-  { title: "跟随系统", value: "system", icon: "$info" },
-  { title: "浅色", value: "light", icon: "$success" },
-  { title: "深色", value: "dark", icon: "$warning" },
-];
+const dragBarEl = ref<HTMLElement | null>(null);
+const contentHeaderEl = ref<HTMLElement | null>(null);
+let unbindA: (() => void) | null = null;
+let unbindB: (() => void) | null = null;
 
-/**
- * 当前主题名称。
- *
- * Vuetify 会把主题名称保存在响应式 Ref 中，这里转成计算属性，
- * 方便模板判断哪个主题处于选中状态。
- */
-const currentThemeName = computed(() => theme.name.value);
+onMounted(() => {
+  if (dragBarEl.value) unbindA = bindWindowDrag(dragBarEl.value);
+  if (contentHeaderEl.value) unbindB = bindWindowDrag(contentHeaderEl.value);
+});
 
-/**
- * 切换到指定 Vuetify 内置主题。
- *
- * @param name Vuetify 内置主题名称，只允许 system / light / dark。
- */
-function changeTheme(name: BuiltInThemeName) {
-  theme.change(name);
-}
+onBeforeUnmount(() => {
+  unbindA?.();
+  unbindB?.();
+});
+
+// ── 样式 ─────────────────────────────────────────────────
+
+const DRAG_BAR_HEIGHT = 28;
+
+const dragBarStyle = () => ({
+  height: DRAG_BAR_HEIGHT + "px",
+  backgroundColor: themeStore.tokens.value.surface,
+});
+
+const headerStyle = () => ({
+  backgroundColor: themeStore.tokens.value.surface,
+  color: themeStore.tokens.value.text,
+  borderBottom: "1px solid " + themeStore.tokens.value.border,
+  padding: "4px 12px",
+});
 </script>
 
 <template>
-  <v-app-bar border="b" density="compact" flat>
-    <v-app-bar-title class="text-body-1 font-weight-medium">
-      {{ currentTool.title }}
-    </v-app-bar-title>
+  <!--
+    顶层 28px drag bar：
+    - macOS：让位红绿灯（traffic lights 浮在 drag bar 区域上）
+    - 其他：也保留为拖动区
+  -->
+  <header
+    ref="dragBarEl"
+    :style="dragBarStyle()"
+    data-tauri-drag-region
+    class="titlebar-drag-bar"
+  />
 
-    <v-chip class="mr-1" color="primary" label size="x-small" variant="tonal">
-      {{ currentTool.status === "available" ? "可用" : "规划中" }}
-    </v-chip>
-
-    <v-chip class="mr-1" color="secondary" label size="x-small" variant="tonal">
-      本地处理
-    </v-chip>
-
-    <!-- 主题切换菜单 -->
-    <v-menu location="bottom end">
-      <template #activator="{ props }">
-        <v-btn
-          v-bind="props"
-          density="compact"
-          prepend-icon="$color"
-          size="small"
-          text="主题"
-          variant="text"
-        />
-      </template>
-
-      <v-list density="compact" nav slim>
-        <v-list-item
-          v-for="option in themeOptions"
-          :key="option.value"
-          :active="currentThemeName === option.value"
-          :prepend-icon="option.icon"
-          :title="option.title"
-          @click="changeTheme(option.value)"
-        />
-      </v-list>
-    </v-menu>
-  </v-app-bar>
+  <!--
+    主 header：只显示当前工具标题。
+    「本地处理」tag 已移除（桌面端 Tauri 应用一切都是本地处理，纯冗余）。
+    「主题」按钮已搬到 AppNavigation，与「设置」按钮同一行。
+  -->
+  <header
+    ref="contentHeaderEl"
+    :style="headerStyle()"
+    data-tauri-drag-region
+    class="titlebar-header"
+  >
+    <span class="font-weight-medium">{{ props.currentTool.title }}</span>
+  </header>
 </template>
+
+<style scoped>
+.titlebar-drag-bar {
+  flex: 0 0 auto;
+  width: 100%;
+}
+
+.titlebar-header {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: default;
+}
+</style>

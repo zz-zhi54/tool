@@ -10,13 +10,19 @@ export type ToolStatus = "available" | "planned";
 export interface ToolCategory {
   id: ToolCategoryId;
   title: string;
+  /**
+   * 主题强调色（hex / rgb 等 CSS 颜色字符串）。
+   * 用于顶部分类按钮图标、下拉菜单前置色条等可见性较弱的元素。
+   * 不传时使用默认主色。
+   */
+  accent?: string;
 }
 
 /**
  * 单个开发工具的注册信息。
  *
- * 当前阶段只负责描述工具的导航与展示信息；后续如果引入路由或动态组件，
- * 可以继续在这里增加 component、shortcut、keywords 等字段。
+ * icon 为 ant-design-vue 图标组件名称（PascalCase 字符串），
+ * 由 src/utils/icons.ts 中的 getIconByName 解析为实际组件。
  */
 export interface ToolDefinition {
   id: string;
@@ -25,4 +31,9 @@ export interface ToolDefinition {
   category: ToolCategoryId;
   icon: string;
   status: ToolStatus;
+  /**
+   * 工具项的主题强调色（hex / rgb 等 CSS 颜色字符串）。
+   * 缺省时回退到所属分类的 accent，便于在菜单中快速区分。
+   */
+  accent?: string;
 }

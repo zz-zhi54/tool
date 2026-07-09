@@ -87,12 +87,13 @@ onBeforeUnmount(stopResize);
       <slot name="left" />
     </section>
 
-    <v-sheet
+    <!-- 分隔条：仅在 resizable 时渲染 -->
+    <div
       v-if="resizable"
       aria-label="调整左右面板宽度"
       role="separator"
-      style="width: 8px; cursor: col-resize; flex: 0 0 8px"
       tabindex="0"
+      class="split-handle"
       @keydown.left.prevent="resizeBy(-5)"
       @keydown.right.prevent="resizeBy(5)"
       @pointerdown.prevent="startResize"
@@ -103,3 +104,20 @@ onBeforeUnmount(stopResize);
     </section>
   </div>
 </template>
+
+<style scoped>
+.split-handle {
+  width: 8px;
+  flex: 0 0 8px;
+  cursor: col-resize;
+  border-radius: 4px;
+  align-self: stretch;
+  background-color: transparent;
+  transition: background-color 120ms ease;
+}
+.split-handle:hover,
+.split-handle:focus {
+  background-color: var(--app-border);
+  outline: none;
+}
+</style>

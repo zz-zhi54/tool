@@ -4,6 +4,11 @@ import { computed, ref } from "vue";
 import PanelCard from "../../components/PanelCard.vue";
 import SplitPanel from "../../components/SplitPanel.vue";
 import {
+  showSuccess,
+  showWarning,
+  showError,
+} from "../../composables/useMessage";
+import {
   decodeBase64,
   encodeBase64,
   validateBase64,
@@ -12,13 +17,11 @@ import { PANEL_KEYS } from "../../utils/storage";
 
 const input = ref("");
 const output = ref("");
-const snackbar = ref(false);
-const snackbarText = ref("");
 
 /**
  * 当前输入的 Base64 合法性。
  *
- * 用于状态栏 chip 显示，帮助用户判断输入内容是否可以被解码。
+ * 用于状态栏 tag 显示，帮助用户判断输入内容是否可以被解码。
  */
 const validation = computed(() => validateBase64(input.value));
 
@@ -35,9 +38,9 @@ function handleEncode() {
 
   try {
     output.value = encodeBase64(input.value);
-    showMessage("已编码为 Base64");
+    showSuccess("已编码为 Base64");
   } catch {
-    showMessage("编码失败，请检查输入内容");
+    showError("编码失败，请检查输入内容");
   }
 }
 
@@ -50,15 +53,15 @@ function handleDecode() {
   }
 
   if (!validation.value.valid) {
-    showMessage("输入不是合法的 Base64 字符串");
+    showWarning("输入不是合法的 Base64 字符串");
     return;
   }
 
   try {
     output.value = decodeBase64(input.value);
-    showMessage("已从 Base64 解码");
+    showSuccess("已从 Base64 解码");
   } catch {
-    showMessage("解码失败，请检查 Base64 输入");
+    showError("解码失败，请检查 Base64 输入");
   }
 }
 
@@ -74,7 +77,7 @@ function handleSwap() {
 
   input.value = output.value;
   output.value = "";
-  showMessage("已交换输入和输出");
+  showSuccess("已交换输入和输出");
 }
 
 /**
@@ -86,7 +89,7 @@ async function handleCopyOutput() {
   }
 
   await navigator.clipboard.writeText(output.value);
-  showMessage("输出已复制");
+  showSuccess("输出已复制");
 }
 
 /**
@@ -95,12 +98,7 @@ async function handleCopyOutput() {
 function handleClear() {
   input.value = "";
   output.value = "";
-  showMessage("已清空");
-}
-
-function showMessage(message: string) {
-  snackbarText.value = message;
-  snackbar.value = true;
+  showSuccess("已清空");
 }
 </script>
 
@@ -109,25 +107,29 @@ function showMessage(message: string) {
     class="d-flex flex-column ga-2 h-100"
     style="min-height: 0; overflow: hidden"
   >
-    <v-toolbar border density="compact" flat rounded style="flex: 0 0 auto">
-      <v-toolbar-title class="text-body-2 font-weight-medium">
-        Base64 编码
-      </v-toolbar-title>
+    <header
+      class="d-flex align-center ga-1 px-2 py-1"
+      style="
+        flex: 0 0 auto;
+        gap: 4px;
+        border: 1px solid var(--app-border);
+        border-radius: 4px;
+        background-color: var(--app-surface);
+      "
+    >
+      <span class="text-body-2 font-weight-medium">Base64 编码</span>
 
-      <v-chip
+      <a-tag
         :color="
           validation.valid
-            ? 'success'
+            ? 'green'
             : validation.empty
-              ? 'info'
+              ? 'default'
               : hasInput
-                ? 'warning'
-                : 'info'
+                ? 'orange'
+                : 'default'
         "
-        class="mr-1"
-        label
-        size="x-small"
-        variant="tonal"
+        size="small"
       >
         {{
           validation.valid
@@ -138,115 +140,84 @@ function showMessage(message: string) {
                 ? "普通文本"
                 : "等待输入"
         }}
-      </v-chip>
+      </a-tag>
 
       <!-- 操作按钮 -->
-      <div class="d-flex align-center ga-1">
-        <v-btn
-          color="primary"
-          density="compact"
-          prepend-icon="$next"
-          :disabled="!hasInput"
-          size="small"
-          text="编码"
-          variant="tonal"
-          @click="handleEncode"
-        />
+      <span style="flex: 1 1 auto" />
 
-        <v-btn
-          color="secondary"
-          density="compact"
-          prepend-icon="$prev"
-          :disabled="!hasInput"
-          size="small"
-          text="解码"
-          variant="tonal"
-          @click="handleDecode"
-        />
+      <a-button
+        :disabled="!hasInput"
+        size="small"
+        type="primary"
+        ghost
+        @click="handleEncode"
+      >
+        编码
+      </a-button>
 
-        <v-btn
-          color="info"
-          density="compact"
-          prepend-icon="$refresh"
-          :disabled="!hasOutput"
-          size="small"
-          text="交换"
-          variant="tonal"
-          @click="handleSwap"
-        />
+      <a-button
+        :disabled="!hasInput"
+        size="small"
+        type="default"
+        ghost
+        @click="handleDecode"
+      >
+        解码
+      </a-button>
 
-        <v-btn
-          color="success"
-          density="compact"
-          prepend-icon="$file"
-          :disabled="!hasOutput"
-          size="small"
-          text="复制输出"
-          variant="tonal"
-          @click="handleCopyOutput"
-        />
+      <a-button
+        :disabled="!hasOutput"
+        size="small"
+        type="dashed"
+        ghost
+        @click="handleSwap"
+      >
+        交换
+      </a-button>
 
-        <v-btn
-          color="warning"
-          density="compact"
-          prepend-icon="$clear"
-          :disabled="!hasInput && !hasOutput"
-          size="small"
-          text="清空"
-          variant="text"
-          @click="handleClear"
-        />
-      </div>
-    </v-toolbar>
+      <a-button
+        :disabled="!hasOutput"
+        size="small"
+        type="primary"
+        ghost
+        @click="handleCopyOutput"
+      >
+        复制输出
+      </a-button>
+
+      <a-button
+        :disabled="!hasInput && !hasOutput"
+        size="small"
+        type="default"
+        ghost
+        @click="handleClear"
+      >
+        清空
+      </a-button>
+    </header>
 
     <!-- 工作区：左右面板比例持久化到 localStorage -->
     <SplitPanel :panel-key="PANEL_KEYS.base64Codec">
       <template #left>
-        <PanelCard icon="$file" title="输入文本">
+        <PanelCard icon="FileTextOutlined" title="输入文本">
           <textarea
             v-model="input"
+            class="app-textarea"
             placeholder="输入需要编码的文本，或粘贴 Base64 字符串进行解码"
-            style="
-              width: 100%;
-              height: 100%;
-              resize: none;
-              border: none;
-              outline: none;
-              background: transparent;
-              font-family: inherit;
-              font-size: inherit;
-              line-height: inherit;
-              color: inherit;
-            "
           />
         </PanelCard>
       </template>
 
       <template #right>
-        <PanelCard icon="$next" title="输出结果">
+        <PanelCard icon="RightOutlined" title="输出结果">
           <textarea
             :value="output"
+            class="app-textarea"
             readonly
             placeholder="编码或解码结果将显示在这里"
-            style="
-              width: 100%;
-              height: 100%;
-              resize: none;
-              border: none;
-              outline: none;
-              background: transparent;
-              font-family: inherit;
-              font-size: inherit;
-              line-height: inherit;
-              color: inherit;
-            "
           />
         </PanelCard>
       </template>
     </SplitPanel>
-
-    <v-snackbar v-model="snackbar" timeout="2000">
-      {{ snackbarText }}
-    </v-snackbar>
   </div>
 </template>
