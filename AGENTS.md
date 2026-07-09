@@ -48,38 +48,21 @@
 - 新增一个工具的流程：创建 `src/tools/<id>/` 与 `src/pages/<id>/`，然后在 `src/tools/registry.ts` 的 `toolCategories` 与 `tools` 中完成注册。
 - Tauri 权限声明位于 `src-tauri/capabilities/default.json`，新增插件命令时请同步扩展该文件。
 
-## Git Workflow & Release Process
+## Release Process
 
-本项目采用「日常在 Gitea、仅发版同步到 GitHub」的双 remote 工作流，目的是让 GitHub 上的历史保持干净清晰。
-
-- `origin` → `https://gitea.poo0054.host/zz_zhi/tool`：日常 push 目标，承接所有 WIP / 小提交。
-- `github` → `https://github.com/zz-zhi54/tool`：仅在准备发版时手动同步，历史必须是整理过的可读提交。
+仓库仅托管在 GitHub 上（`origin` → `https://github.com/zz-zhi54/tool`），无其它 remote。
 
 ### 日常提交
 
-```bash
-git add ...
-git commit -m "feat: ..."
-git push           # 默认推送到 origin（Gitea）
-```
-
-### 首次发版前：切换默认上行
-
-```bash
-git push -u origin main   # 把 main 的上游改成 Gitea
-```
-
-执行后 `git push` 默认会去 Gitea；GitHub 只能通过显式命令同步。
+按上方 Commit & Pull Request Guidelines 进行；`git push` 直接同步到 GitHub。
 
 ### 准备发版
 
-1. 在本地整理 `main` 上的提交（`git rebase -i` / `git reset --soft` 合并 WIP），保证每次推送都形成可读的发布单元。
-2. `git tag vX.Y.Z` 打完 tag 后 `git push origin vX.Y.Z`（可选，保留 Gitea 端的 tag），再 `git push github main --tags` 同步到 GitHub。
-3. 推送到 GitHub 的 tag 会触发 `.github/workflows/release.yml`，自动在 macOS / Windows / Linux 上构建并发布为 **Pre-release**。
+1. 在本地整理 `main` 上的提交（`git rebase -i` / `git reset --soft` 合并 WIP），保持历史清晰。
+2. `git tag vX.Y.Z` 后 `git push origin main --tags`。
+3. tag 触发 `.github/workflows/release.yml`，自动在 macOS / Windows / Linux 上构建并发布为 **Pre-release**。
 
 ### 注意事项
 
-- 不要把 WIP / 调试 / `fix typo` 之类的提交直接推到 `github`。
+- 不要把 WIP / 调试 / `fix typo` 之类的提交直接推到 `main`。
 - tag 一旦触发 release workflow，请勿再修改 `src-tauri/tauri.conf.json` 或 `src-tauri/Cargo.toml` 的 `version`，除非同时 bump tag。
-- `github/main` 与 `origin/main` 不一致时以 `origin/main` 为准；GitHub 是发布镜像。
-- 当前 CI（`.github/workflows/ci.yml`）只在 GitHub 端运行；Gitea 端如有自建 runner 可另行配置。
