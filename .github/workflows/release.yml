@@ -20,8 +20,12 @@ jobs:
       fail-fast: false
       matrix:
         include:
+          # macOS 显式 --no-sign，跳过 codesign / ad-hoc 签名；
+          # 开源项目不做 Apple 公证，未签名 dmg 在 macOS 上走「未知开发者」
+          # 宽容路径（系统设置 → 仍要打开），避免半残 ad-hoc 签名触发
+          # Gatekeeper 严格拒绝（症状：tool.app 已损坏，无法打开）。
           - platform: macos-latest
-            args: --target aarch64-apple-darwin
+            args: --target aarch64-apple-darwin --no-sign
           - platform: windows-2022
             args: ''
           - platform: ubuntu-22.04
@@ -65,7 +69,7 @@ jobs:
         with:
           tagName: v__VERSION__
           releaseName: 'Tool v__VERSION__'
-          releaseDraft: true
+          releaseDraft: false
           prerelease: false
           args: ${{ matrix.args }}
           releaseBody: |
@@ -81,7 +85,7 @@ jobs:
 
             ### 已知问题
 
-            - macOS 安装包未签名 / 未公证，首次打开需在「系统设置 → 隐私与安全性」点击「仍要打开」。
+            - macOS 安装包未做代码签名 / 未公证，首次打开需在「系统设置 → 隐私与安全性」点击「仍要打开」。如「仍要打开」按钮未显示，可在终端执行 `xattr -dr com.apple.quarantine /Applications/tool.app` 后重试。
             - Windows / Linux 安装包未数字签名，杀毒软件可能误报。
             - 应用内自动更新已启用：在「设置 → 关于 → 检查更新」即可一键升级。
         env:
