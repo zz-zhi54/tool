@@ -35,20 +35,23 @@ withDefaults(
 
 <template>
   <section
-    class="d-flex flex-column"
     :style="
       compact
-        ? 'overflow: hidden; border: 1px solid var(--app-border); border-radius: 4px; background-color: var(--app-surface);'
-        : 'height: 100%; min-height: 0; overflow: hidden; border: 1px solid var(--app-border); border-radius: 4px; background-color: var(--app-surface);'
+        ? 'overflow: hidden; border: 1px solid var(--app-border); border-radius: 4px; background-color: var(--app-surface); display: flex; flex-direction: column;'
+        : 'height: 100%; min-height: 0; overflow: hidden; border: 1px solid var(--app-border); border-radius: 4px; background-color: var(--app-surface); display: flex; flex-direction: column;'
     "
   >
     <header
-      class="d-flex align-center text-body-2 font-weight-medium px-2 py-1"
-      style="
-        flex: 0 0 auto;
-        gap: 4px;
-        border-bottom: 1px solid var(--app-border);
-      "
+      :style="{
+        display: 'flex',
+        alignItems: 'center',
+        gap: '4px',
+        flex: '0 0 auto',
+        padding: '4px 8px',
+        fontSize: '14px',
+        fontWeight: 500,
+        borderBottom: '1px solid var(--app-border)',
+      }"
     >
       <component
         :is="getIconByName(icon)"
@@ -62,7 +65,20 @@ withDefaults(
       <slot name="actions" />
     </header>
 
-    <div class="pa-2" :style="compact ? { overflow } : { flex: 1, minHeight: 0, overflow }">
+    <div
+      :style="{
+        padding: '8px',
+        ...(compact
+          ? { display: 'flex', flexDirection: 'column', overflow }
+          : {
+              flex: 1,
+              minHeight: 0,
+              display: 'flex',
+              flexDirection: 'column',
+              overflow: 'auto',
+            }),
+      }"
+    >
       <slot />
     </div>
   </section>

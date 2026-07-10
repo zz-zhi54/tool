@@ -71,7 +71,7 @@ const headerStyle = () => ({
     data-tauri-drag-region
     class="titlebar-header"
   >
-    <span class="font-weight-medium">{{ props.currentTool.title }}</span>
+    <span style="font-weight: 500">{{ props.currentTool.title }}</span>
   </header>
 </template>
 

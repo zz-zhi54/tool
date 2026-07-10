@@ -1,9 +1,10 @@
 /**
- * 通用工具类样式
+ * 全局样式只保留：
+ *   1. 主题变量（浅色 / 深色），驱动 CSS 变量
+ *   2. .app-textarea（透明等宽文本域基底）
+ *   3. Tauri 窗口拖动规则
  *
- * 为保留原有紧凑桌面布局（d-flex、ga-2、pa-2 等类名），
- * 这里把这些常用工具类映射到 antd 共存的样式。
- * 所有数值贴近原有视觉，确保迁移后外观差异最小。
+ * 其它手写工具类（d-flex / ga-* / text-body-* 等）已全部被 antdv 组件替代。
  */
 
 /* ── 主题变量 ─────────────────────────────── */
@@ -30,137 +31,6 @@ body {
   --app-border-strong: rgba(255, 255, 255, 0.28);
 }
 
-/* ── Display & Flex ─────────────────────────── */
-
-.d-flex {
-  display: flex;
-}
-.flex-column {
-  flex-direction: column;
-}
-.flex-wrap {
-  flex-wrap: wrap;
-}
-.align-center {
-  align-items: center;
-}
-.justify-center {
-  justify-content: center;
-}
-.min-width-0 {
-  min-width: 0;
-}
-
-/* ── Width / Height ─────────────────────────── */
-
-.h-100 {
-  height: 100%;
-}
-.w-100 {
-  width: 100%;
-}
-
-/* ── Spacing（4px 基线） ──────────────────────── */
-
-.ga-1 {
-  gap: 4px;
-}
-.ga-2 {
-  gap: 8px;
-}
-.ga-3 {
-  gap: 12px;
-}
-.ga-4 {
-  gap: 16px;
-}
-
-.pa-0 {
-  padding: 0;
-}
-.pa-2 {
-  padding: 8px;
-}
-.px-2 {
-  padding-left: 8px;
-  padding-right: 8px;
-}
-.px-3 {
-  padding-left: 12px;
-  padding-right: 12px;
-}
-.py-1 {
-  padding-top: 4px;
-  padding-bottom: 4px;
-}
-.py-2 {
-  padding-top: 8px;
-  padding-bottom: 8px;
-}
-.py-3 {
-  padding-top: 12px;
-  padding-bottom: 12px;
-}
-
-.ma-0 {
-  margin: 0;
-}
-.mx-2 {
-  margin-left: 8px;
-  margin-right: 8px;
-}
-.mx-3 {
-  margin-left: 12px;
-  margin-right: 12px;
-}
-.mt-1 {
-  margin-top: 4px;
-}
-.mr-1 {
-  margin-right: 4px;
-}
-.mr-2 {
-  margin-right: 8px;
-}
-.ml-1 {
-  margin-left: 4px;
-}
-.ml-3 {
-  margin-left: 12px;
-}
-.mb-1 {
-  margin-bottom: 4px;
-}
-.mb-2 {
-  margin-bottom: 8px;
-}
-
-/* ── Typography ──────────────────────────────── */
-
-.text-body-1 {
-  font-size: 14px;
-  font-weight: 500;
-  line-height: 1.5715;
-}
-.text-body-2 {
-  font-size: 14px;
-  font-weight: 400;
-  line-height: 1.5715;
-}
-.text-caption {
-  font-size: 12px;
-  font-weight: 400;
-  line-height: 1.66;
-  letter-spacing: 0.04em;
-}
-.font-weight-medium {
-  font-weight: 500;
-}
-
-.text-medium-emphasis {
-  color: var(--app-text-muted);
-}
-
 /* ── 透明背景文本域 ──────────────────────────── */
 
 .app-textarea,
@@ -182,10 +52,8 @@ body {
   appearance: none;
 }
 
-/*
- * cc-switch/src/index.css 里原始的 drag 规则照搬。
- * 注意 cc-switch 没有显式 user-select：none —— 拖动时由 webkit 处理。
- */
+/* ── Tauri 窗口拖动规则 ──────────────────────────── */
+
 [data-tauri-drag-region] {
   -webkit-app-region: drag;
 }

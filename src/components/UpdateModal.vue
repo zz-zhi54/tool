@@ -87,37 +87,44 @@ async function onRelaunch() {
     width="420px"
   >
     <!-- 初始 / 检查中 -->
-    <div
+    <a-flex
       v-if="status === 'idle' || status === 'checking'"
-      class="d-flex flex-column align-center ga-3 py-3"
+      vertical
+      align="center"
+      :gap="12"
+      style="padding: 12px 0"
     >
       <a-spin v-if="status === 'checking'" />
-      <div class="text-body-2">正在检查更新…</div>
-    </div>
+      <span>正在检查更新…</span>
+    </a-flex>
 
     <!-- 已是最新 -->
-    <div
+    <a-flex
       v-else-if="status === 'up-to-date'"
-      class="d-flex flex-column align-center ga-2 py-3"
+      vertical
+      align="center"
+      :gap="8"
+      style="padding: 12px 0"
     >
-      <div class="text-body-2 font-weight-medium">已是最新版本</div>
-      <div class="text-caption" style="color: var(--app-text-muted)">
+      <span style="font-weight: 500">已是最新版本</span>
+      <a-typography-text type="secondary" style="font-size: 12px">
         当前已是 v{{ appVersion }}，无需更新。
-      </div>
+      </a-typography-text>
       <a-button type="primary" @click="open = false">好的</a-button>
-    </div>
+    </a-flex>
 
     <!-- 发现新版本 -->
-    <div
+    <a-flex
       v-else-if="status === 'available'"
-      class="d-flex flex-column ga-3 py-2"
+      vertical
+      :gap="12"
+      style="padding: 8px 0"
     >
-      <div class="text-body-2">
+      <span>
         发现新版本 <strong>v{{ info?.version }}</strong>
-      </div>
+      </span>
       <div
         v-if="info?.notes"
-        class="text-caption"
         style="
           color: var(--app-text-muted);
           max-height: 200px;
@@ -126,52 +133,65 @@ async function onRelaunch() {
           border: 1px solid var(--app-border);
           border-radius: 4px;
           padding: 8px;
+          font-size: 12px;
         "
       >
         {{ info.notes }}
       </div>
-      <div class="d-flex" style="gap: 8px; justify-content: flex-end">
+      <a-flex :gap="8" justify="flex-end">
         <a-button @click="open = false">稍后</a-button>
-        <a-button type="primary" :loading="isDownloading" @click="onConfirmDownload">
+        <a-button
+          type="primary"
+          :loading="isDownloading"
+          @click="onConfirmDownload"
+        >
           <template #icon><CloudDownloadOutlined /></template>
           立即下载
         </a-button>
-      </div>
-    </div>
+      </a-flex>
+    </a-flex>
 
     <!-- 下载中 -->
-    <div
+    <a-flex
       v-else-if="status === 'downloading'"
-      class="d-flex flex-column ga-3 py-3"
+      vertical
+      :gap="12"
+      style="padding: 12px 0"
     >
-      <div class="text-body-2">正在下载 v{{ info?.version }}…</div>
+      <span>正在下载 v{{ info?.version }}…</span>
       <a-progress :percent="progress" />
-    </div>
+    </a-flex>
 
     <!-- 下载完成 -->
-    <div
+    <a-flex
       v-else-if="status === 'ready'"
-      class="d-flex flex-column align-center ga-3 py-3"
+      vertical
+      align="center"
+      :gap="12"
+      style="padding: 12px 0"
     >
-      <div class="text-body-2 font-weight-medium">下载完成</div>
-      <div class="text-caption" style="color: var(--app-text-muted)">
+      <span style="font-weight: 500">下载完成</span>
+      <a-typography-text type="secondary" style="font-size: 12px">
         点击「立即重启」应用更新。
-      </div>
+      </a-typography-text>
       <a-button type="primary" @click="onRelaunch">
         <template #icon><RocketOutlined /></template>
         立即重启
       </a-button>
-    </div>
+    </a-flex>
 
     <!-- 失败 -->
-    <div
+    <a-flex
       v-else-if="status === 'error'"
-      class="d-flex flex-column align-center ga-3 py-3"
+      vertical
+      align="center"
+      :gap="12"
+      style="padding: 12px 0"
     >
-      <div class="text-body-2" style="color: var(--app-error, #d4380d)">
+      <span style="color: #d4380d">
         {{ error ? describeError(error) : "更新失败" }}
-      </div>
+      </span>
       <a-button @click="open = false">关闭</a-button>
-    </div>
+    </a-flex>
   </a-modal>
 </template>
