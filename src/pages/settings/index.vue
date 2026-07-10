@@ -75,16 +75,16 @@ function resetAll() {
 <template>
   <a-flex
     vertical
-    gap="small"
+    :gap="8"
     style="height: 100%; padding: 8px; box-sizing: border-box"
   >
     <a-card size="small" :body-style="{ padding: '4px 12px' }">
-      <a-flex align="center" gap="small">
-        <span class="ant-typography">设置</span>
-        <a-typography-text type="secondary" style="font-size: 12px">
+      <a-flex align="center" :gap="8">
+        <strong>设置</strong>
+        <a-typography-text type="secondary">
           v{{ appVersion }}
         </a-typography-text>
-        <div style="flex: 1 1 auto" />
+        <a-flex :flex="'1 1 auto'" />
         <a-button size="small" type="default" @click="resetAll">
           <template #icon>
             <ReloadOutlined />
@@ -96,7 +96,7 @@ function resetAll() {
 
     <a-flex
       vertical
-      gap="middle"
+      :gap="16"
       style="flex: 1 1 auto; min-height: 0; overflow: auto"
     >
       <a-card
@@ -106,12 +106,12 @@ function resetAll() {
         :title="group.meta.title"
       >
         <template #extra>
-          <a-typography-text type="secondary" style="font-size: 12px">
+          <a-typography-text type="secondary">
             {{ group.meta.description }}
           </a-typography-text>
         </template>
 
-        <a-flex vertical gap="middle">
+        <a-flex vertical :gap="16">
           <SettingItem
             v-for="snap in group.items"
             :key="snap.key"

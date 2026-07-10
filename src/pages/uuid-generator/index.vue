@@ -58,19 +58,6 @@ async function handleCopyAll() {
   await navigator.clipboard.writeText(uuids.value.join("\n"));
   showSuccess("已复制全部 UUID");
 }
-
-const cardStyle = {
-  border: "1px solid var(--app-border)",
-  borderRadius: "4px",
-  backgroundColor: "var(--app-surface)",
-} as const;
-
-const uuidRowStyle = {
-  border: "1px solid var(--app-border)",
-  borderRadius: "4px",
-  backgroundColor: "var(--app-surface)",
-  padding: "4px 8px",
-} as const;
 </script>
 
 <template>
@@ -87,28 +74,20 @@ const uuidRowStyle = {
   >
     <a-card size="small" :body-style="{ padding: '4px 12px' }">
       <a-flex align="center" :gap="4" wrap>
-        <span style="font-weight: 500">UUID 生成器</span>
+        <strong>UUID 生成器</strong>
 
         <a-tag color="cyan" size="small">{{ uuids.length }} 个</a-tag>
 
-        <div style="flex: 1 1 auto" />
+        <a-flex :flex="'1 1 auto'" />
 
-        <a-button
-          size="small"
-          type="primary"
-          @click="handleCopyAll"
-        >
+        <a-button size="small" type="primary" @click="handleCopyAll">
           <template #icon>
             <CopyOutlined />
           </template>
           复制全部
         </a-button>
 
-        <a-button
-          size="small"
-          type="default"
-          @click="handleClear"
-        >
+        <a-button size="small" type="default" @click="handleClear">
           <template #icon>
             <DeleteOutlined />
           </template>
@@ -118,14 +97,10 @@ const uuidRowStyle = {
     </a-card>
 
     <!-- 控件区 -->
-    <a-card
-      size="small"
-      :body-style="{ padding: '8px 12px' }"
-      :style="cardStyle"
-    >
+    <a-card size="small" :body-style="{ padding: '8px 12px' }">
       <a-flex vertical :gap="8">
         <a-flex align="center" :gap="8" wrap>
-          <span style="min-width: 60px; font-size: 12px">版本</span>
+          <span>版本</span>
           <a-select
             v-model:value="version"
             size="small"
@@ -134,7 +109,7 @@ const uuidRowStyle = {
           />
         </a-flex>
         <a-flex align="center" :gap="8" wrap>
-          <span style="min-width: 60px; font-size: 12px">数量</span>
+          <span>数量</span>
           <a-input-number
             v-model:value="count"
             size="small"
@@ -145,7 +120,7 @@ const uuidRowStyle = {
           />
           <a-checkbox v-model:checked="uppercase">大写</a-checkbox>
           <a-checkbox v-model:checked="withHyphens">带连字符</a-checkbox>
-          <div style="flex: 1 1 auto" />
+          <a-flex :flex="'1 1 auto'" />
           <a-button size="small" type="primary" @click="handleGenerate">
             <template #icon>
               <ReloadOutlined />
@@ -157,7 +132,7 @@ const uuidRowStyle = {
     </a-card>
 
     <!-- 结果区 -->
-    <div style="flex: 1 1 auto; min-height: 0; overflow: auto">
+    <a-flex vertical style="flex: 1 1 auto; min-height: 0; overflow: auto">
       <a-empty
         v-if="uuids.length === 0"
         description="选择版本与数量后点击「生成」查看 UUID 列表。"
@@ -168,41 +143,37 @@ const uuidRowStyle = {
         </template>
       </a-empty>
 
-      <a-flex
-        v-else
-        vertical
-        :gap="4"
-        :style="{
-          ...cardStyle,
-          padding: '8px',
-        }"
-      >
-        <textarea
+      <a-flex v-else vertical :gap="8">
+        <a-textarea
           :value="preview"
-          class="app-textarea"
           readonly
+          :allow-clear="false"
           style="min-height: 80px; max-height: 30vh"
         />
         <a-flex vertical :gap="4" style="max-height: 35vh; overflow: auto">
-          <a-flex
+          <a-card
             v-for="(id, idx) in uuids"
             :key="idx"
-            align="center"
-            :gap="8"
-            :style="uuidRowStyle"
+            size="small"
+            :body-style="{ padding: '4px 8px' }"
           >
-            <a-tag color="blue" size="small">#{{ idx + 1 }}</a-tag>
-            <code style="flex: 1; word-break: break-all; font-size: 14px">
-              {{ id }}
-            </code>
-            <a-button size="small" type="text" @click="handleCopyOne(id)">
-              <template #icon>
-                <CopyOutlined />
-              </template>
-            </a-button>
-          </a-flex>
+            <a-flex align="center" :gap="8">
+              <a-tag color="blue" size="small">#{{ idx + 1 }}</a-tag>
+              <a-typography-text
+                copyable
+                style="flex: 1; word-break: break-all; font-size: 14px"
+              >
+                {{ id }}
+              </a-typography-text>
+              <a-button size="small" type="text" @click="handleCopyOne(id)">
+                <template #icon>
+                  <CopyOutlined />
+                </template>
+              </a-button>
+            </a-flex>
+          </a-card>
         </a-flex>
       </a-flex>
-    </div>
+    </a-flex>
   </a-flex>
 </template>

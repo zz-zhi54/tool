@@ -7,11 +7,13 @@
  * - 右：上传 / 拖拽 / 从剪贴板读取图片，解码出原始内容。
  *
  * 两个功能互相独立，状态条各自显示。
+ *
+ * 完全基于 antdv `<a-row>` / `<a-col>` / `<a-flex>` / `<a-upload-dragger>` 布局，
+ * 不使用任何自定义 class 与 inline style（除 antdv prop 无法表达的必要例外）。
  */
 import { computed, onBeforeUnmount, ref, watch } from "vue";
 
 import {
-  CloudUploadOutlined,
   CopyOutlined,
   DeleteOutlined,
   DownloadOutlined,
@@ -63,7 +65,6 @@ const imagePreviewURL = ref<string | null>(null);
 const decodedText = ref<string | null>(null);
 const decodeError = ref<string | null>(null);
 const isDecoding = ref(false);
-const isDragActive = ref(false);
 
 // ── 计算属性：上「生成」 ─────────────────────────────────
 const inputValidation = computed(() => validateQrInput(input.value));
@@ -108,13 +109,6 @@ const decodeStatusLabel = computed(() => {
   if (hasPreviewImage.value) return "已加载图片，等待识别";
   return "等待图片";
 });
-
-const dropZoneStyle = computed(() => ({
-  borderColor: isDragActive.value ? "#000000" : "var(--app-border)",
-  backgroundColor: isDragActive.value
-    ? "rgba(0, 0, 0, 0.04)"
-    : "var(--app-surface)",
-}));
 
 // ── 生成逻辑 ────────────────────────────────────────────
 function scheduleGenerate() {
@@ -198,32 +192,6 @@ async function handleFile(file: File) {
   } finally {
     isDecoding.value = false;
   }
-}
-
-function onFileInputChange(e: Event) {
-  const target = e.target as HTMLInputElement;
-  const file = target.files?.[0];
-  if (file) void handleFile(file);
-  target.value = "";
-}
-
-function onDrop(e: DragEvent) {
-  e.preventDefault();
-  isDragActive.value = false;
-  const file = e.dataTransfer?.files?.[0];
-  if (file) void handleFile(file);
-}
-
-function onDragOver(e: DragEvent) {
-  e.preventDefault();
-}
-
-function onDragEnter() {
-  isDragActive.value = true;
-}
-
-function onDragLeave() {
-  isDragActive.value = false;
 }
 
 async function onPickFromClipboard() {
@@ -310,395 +278,264 @@ async function handleCopyDecoded() {
 onBeforeUnmount(() => {
   if (imagePreviewURL.value) URL.revokeObjectURL(imagePreviewURL.value);
 });
-
-/* ── 共享样式（用对象 inline，避免 scoped CSS） ── */
-const colorInputStyle = {
-  width: "32px",
-  height: "24px",
-  padding: 0,
-  border: "1px solid var(--app-border)",
-  borderRadius: "4px",
-  background: "transparent",
-  cursor: "pointer",
-} as const;
-
-const previewWrapStyle = {
-  flex: "1 1 auto",
-  minHeight: "200px",
-  display: "flex",
-  alignItems: "center",
-  justifyContent: "center",
-  backgroundColor: "#ffffff",
-  border: "1px solid var(--app-border)",
-  borderRadius: "4px",
-  padding: "12px",
-  overflow: "hidden",
-} as const;
-
-const previewImgStyle = {
-  maxWidth: "100%",
-  maxHeight: "100%",
-  objectFit: "contain" as const,
-  imageRendering: "pixelated" as const,
-};
-
-const dropZoneBaseStyle = {
-  position: "relative" as const,
-  display: "flex",
-  flexDirection: "column" as const,
-  alignItems: "center",
-  justifyContent: "center",
-  flex: "0 0 auto",
-  minHeight: "140px",
-  border: "1px dashed var(--app-border)",
-  borderRadius: "4px",
-  cursor: "pointer",
-  transition: "border-color 120ms ease, background-color 120ms ease",
-};
-
-const fileInputStyle = {
-  position: "absolute" as const,
-  inset: 0,
-  width: "100%",
-  height: "100%",
-  opacity: 0,
-  cursor: "pointer",
-};
 </script>
 
 <template>
-  <div style="height: 100%; padding: 8px; box-sizing: border-box">
-    <a-row :gutter="8" style="height: 100%; margin: 0">
-      <!-- 左：生成 -->
-      <a-col :xs="24" :sm="24" :md="12" :lg="12" style="height: 100%">
-        <PanelCard icon="BarcodeOutlined" title="生成二维码" overflow="auto">
-          <template #actions>
-            <a-tag :color="generateStatusColor" size="small">
-              {{ generateStatusLabel }}
-            </a-tag>
-            <a-button
-              size="small"
-              type="text"
-              @click="handleClearGenerate"
-            >
-              <template #icon>
-                <DeleteOutlined />
-              </template>
-              清空
-            </a-button>
-          </template>
+  <a-row
+    :gutter="8"
+    style="height: 100%; margin: 0; padding: 8px; box-sizing: border-box"
+  >
+    <!-- 左：生成 -->
+    <a-col :xs="24" :md="12" style="height: 100%">
+      <PanelCard icon="BarcodeOutlined" title="生成二维码" overflow="auto">
+        <template #actions>
+          <a-tag :color="generateStatusColor" size="small">
+            {{ generateStatusLabel }}
+          </a-tag>
+          <a-button size="small" type="text" @click="handleClearGenerate">
+            <template #icon>
+              <DeleteOutlined />
+            </template>
+            清空
+          </a-button>
+        </template>
 
-          <a-flex vertical :gap="8" style="height: 100%">
-            <textarea
-              v-model="input"
-              class="app-textarea"
-              placeholder="输入任意文本（URL、JSON、联系方式…）"
-              style="flex: 0 0 auto; min-height: 72px; max-height: 120px"
-            />
-            <a-typography-text type="secondary" style="font-size: 12px">
-              {{ charCount }} 字符
+        <a-flex vertical :gap="8" style="height: 100%; min-height: 0">
+          <a-textarea
+            v-model:value="input"
+            :allow-clear="false"
+            placeholder="输入任意文本（URL、JSON、联系方式…）"
+            style="flex: 0 0 auto; min-height: 72px; max-height: 120px"
+          />
+
+          <a-typography-text type="secondary">
+            {{ charCount }} 字符
+          </a-typography-text>
+
+          <!-- 二维码预览区 -->
+          <a-flex
+            align="center"
+            justify="center"
+            style="
+              flex: 1 1 auto;
+              min-height: 200px;
+              background-color: #ffffff;
+              border: 1px solid var(--app-border);
+              border-radius: 4px;
+              padding: 12px;
+              overflow: hidden;
+            "
+          >
+            <a-typography-text v-if="generateError" type="danger">
+              生成失败：{{ generateError }}
             </a-typography-text>
-
-            <!-- 居中预览：二维码主体展示区 -->
-            <div :style="previewWrapStyle">
-              <a-typography-text
-                v-if="generateError"
-                type="danger"
-                style="text-align: center; font-size: 12px"
-              >
-                生成失败：{{ generateError }}
-              </a-typography-text>
-              <a-empty
-                v-else-if="!hasGeneratedImage"
-                :image="undefined"
-                description="在上方输入内容，二维码会实时显示"
-                style="font-size: 12px"
-              >
-                <template #image>
-                  <span />
-                </template>
-              </a-empty>
-              <img
-                v-else
-                :src="generatedDataURL ?? ''"
-                alt="二维码"
-                :width="size"
-                :height="size"
-                :style="previewImgStyle"
-              />
-            </div>
-
-            <a-flex
-              vertical
-              :gap="8"
-              style="border-top: 1px solid var(--app-border); padding-top: 8px"
+            <a-empty
+              v-else-if="!hasGeneratedImage"
+              :image="undefined"
+              description="在下方输入内容，二维码会实时显示"
             >
-              <a-typography-text strong style="font-size: 12px">
-                生成配置
+              <template #image>
+                <span />
+              </template>
+            </a-empty>
+            <a-image
+              v-else
+              :src="generatedDataURL ?? ''"
+              :width="size"
+              :height="size"
+              :preview="false"
+              style="
+                image-rendering: pixelated;
+                max-width: 100%;
+                max-height: 100%;
+              "
+            />
+          </a-flex>
+
+          <a-divider style="margin: 0" />
+
+          <!-- 生成配置 -->
+          <a-flex vertical :gap="8">
+            <strong>生成配置</strong>
+
+            <a-flex align="center" :gap="8" wrap>
+              <span>尺寸</span>
+              <a-slider v-model:value="size" :min="160" :max="640" :step="16" />
+              <a-typography-text type="secondary">
+                {{ size }}px
               </a-typography-text>
-
-              <a-flex align="center" :gap="8">
-                <span style="width: 56px; font-size: 12px">尺寸</span>
-                <a-slider
-                  v-model:value="size"
-                  :min="160"
-                  :max="640"
-                  :step="16"
-                  style="flex: 1"
-                />
-                <span
-                  style="
-                    width: 48px;
-                    text-align: right;
-                    font-size: 12px;
-                    color: var(--app-text-muted);
-                  "
-                >
-                  {{ size }}px
-                </span>
-              </a-flex>
-
-              <a-flex align="center" :gap="8">
-                <span style="width: 56px; font-size: 12px">容错</span>
-                <a-radio-group
-                  v-model:value="errorLevel"
-                  size="small"
-                  option-type="button"
-                  button-style="solid"
-                >
-                  <a-radio-button value="L">L · 7%</a-radio-button>
-                  <a-radio-button value="M">M · 15%</a-radio-button>
-                  <a-radio-button value="Q">Q · 25%</a-radio-button>
-                  <a-radio-button value="H">H · 30%</a-radio-button>
-                </a-radio-group>
-              </a-flex>
-
-              <a-flex align="center" :gap="8">
-                <span style="width: 56px; font-size: 12px">边距</span>
-                <a-slider
-                  v-model:value="margin"
-                  :min="0"
-                  :max="8"
-                  :step="1"
-                  style="flex: 1"
-                />
-                <span
-                  style="
-                    width: 48px;
-                    text-align: right;
-                    font-size: 12px;
-                    color: var(--app-text-muted);
-                  "
-                >
-                  {{ margin }}
-                </span>
-              </a-flex>
-
-              <a-flex align="center" :gap="12">
-                <span style="width: 56px; font-size: 12px">前景色</span>
-                <input
-                  v-model="fgColor"
-                  type="color"
-                  :style="colorInputStyle"
-                />
-                <span
-                  style="
-                    color: var(--app-text-muted);
-                    font-family: ui-monospace, monospace;
-                    font-size: 12px;
-                  "
-                >
-                  {{ fgColor }}
-                </span>
-                <div style="flex: 1" />
-                <span style="width: 56px; font-size: 12px">背景色</span>
-                <input
-                  v-model="bgColor"
-                  type="color"
-                  :style="colorInputStyle"
-                />
-                <span
-                  style="
-                    color: var(--app-text-muted);
-                    font-family: ui-monospace, monospace;
-                    font-size: 12px;
-                  "
-                >
-                  {{ bgColor }}
-                </span>
-              </a-flex>
             </a-flex>
 
-            <!-- 操作行 -->
-            <a-flex
-              align="center"
-              :gap="8"
-              wrap
-              style="border-top: 1px solid var(--app-border); padding-top: 8px"
-            >
-              <a-button
+            <a-flex align="center" :gap="8" wrap>
+              <span>容错</span>
+              <a-radio-group
+                v-model:value="errorLevel"
                 size="small"
-                type="primary"
-                @click="handleCopyInput"
+                option-type="button"
+                button-style="solid"
               >
-                <template #icon>
-                  <CopyOutlined />
-                </template>
-                复制输入
-              </a-button>
-              <a-button
-                size="small"
-                type="primary"
-                @click="handleDownloadPng"
-              >
-                <template #icon>
-                  <DownloadOutlined />
-                </template>
-                下载 PNG
-              </a-button>
-              <a-button
-                size="small"
-                type="primary"
-                @click="handleDownloadSvg"
-              >
-                <template #icon>
-                  <DownloadOutlined />
-                </template>
-                下载 SVG
-              </a-button>
+                <a-radio-button value="L">L · 7%</a-radio-button>
+                <a-radio-button value="M">M · 15%</a-radio-button>
+                <a-radio-button value="Q">Q · 25%</a-radio-button>
+                <a-radio-button value="H">H · 30%</a-radio-button>
+              </a-radio-group>
+            </a-flex>
+
+            <a-flex align="center" :gap="8" wrap>
+              <span>边距</span>
+              <a-slider v-model:value="margin" :min="0" :max="8" :step="1" />
+              <a-typography-text type="secondary">
+                {{ margin }}
+              </a-typography-text>
+            </a-flex>
+
+            <a-flex align="center" :gap="8" wrap>
+              <span>前景色</span>
+              <input v-model="fgColor" type="color" />
+              <a-typography-text code>{{ fgColor }}</a-typography-text>
+              <a-flex :flex="'1 1 auto'" />
+              <span>背景色</span>
+              <input v-model="bgColor" type="color" />
+              <a-typography-text code>{{ bgColor }}</a-typography-text>
             </a-flex>
           </a-flex>
-        </PanelCard>
-      </a-col>
 
-      <!-- 右：识别 -->
-      <a-col :xs="24" :sm="24" :md="12" :lg="12" style="height: 100%">
-        <PanelCard icon="ScanOutlined" title="识别二维码" overflow="auto">
-          <template #actions>
-            <a-tag :color="decodeStatusColor" size="small">
-              {{ decodeStatusLabel }}
-            </a-tag>
-            <a-button
-              size="small"
-              type="text"
-              @click="handleClearDecode"
-            >
-              <template #icon>
-                <DeleteOutlined />
-              </template>
-              清空
-            </a-button>
-          </template>
+          <a-divider style="margin: 0" />
 
-          <a-flex vertical :gap="8" style="height: 100%">
-            <!-- 拖拽区 + 选择文件 -->
-            <label
-              :style="{ ...dropZoneBaseStyle, ...dropZoneStyle }"
-              @dragenter.prevent="onDragEnter"
-              @dragover.prevent="onDragOver"
-              @dragleave.prevent="onDragLeave"
-              @drop.prevent="onDrop"
-            >
-              <input
-                type="file"
-                accept="image/*"
-                :style="fileInputStyle"
-                @change="onFileInputChange"
-              />
-              <CloudUploadOutlined
-                style="font-size: 28px; color: var(--app-text-muted)"
-              />
-              <div style="margin-top: 6px; color: var(--app-text)">
-                点击选择 或 拖拽图片到此处
-              </div>
-              <div
-                style="
-                  margin-top: 2px;
-                  color: var(--app-text-muted);
-                  font-size: 12px;
-                "
-              >
-                支持 PNG / JPG / WebP / BMP，单张最大 10MB
-              </div>
-            </label>
-
+          <!-- 操作行 -->
+          <a-flex align="center" :gap="8" wrap>
             <a-button
               size="small"
               type="primary"
-              :loading="isDecoding"
-              @click="onPickFromClipboard"
+              :disabled="!hasInput"
+              @click="handleCopyInput"
             >
               <template #icon>
-                <ScanOutlined />
+                <CopyOutlined />
               </template>
-              从剪贴板读取图片
+              复制输入
             </a-button>
-
-            <!-- 图片预览 -->
-            <a-flex
-              v-if="imagePreviewURL"
-              align="center"
-              justify="center"
-              style="
-                flex: 0 0 auto;
-                max-height: 200px;
-                background-color: #ffffff;
-                border: 1px solid var(--app-border);
-                border-radius: 4px;
-                padding: 8px;
-                overflow: hidden;
-              "
+            <a-button
+              size="small"
+              type="primary"
+              :disabled="!hasGeneratedImage"
+              @click="handleDownloadPng"
             >
-              <img
-                :src="imagePreviewURL"
-                alt="待识别图片"
-                style="max-width: 100%; max-height: 184px; object-fit: contain"
-              />
-            </a-flex>
-
-            <!-- 解码结果 -->
-            <textarea
-              :value="decodedText ?? ''"
-              class="app-textarea"
-              readonly
-              placeholder="解码结果会显示在这里"
-              style="flex: 1; min-height: 80px"
-            />
-            <a-typography-text
-              v-if="decodeError"
-              type="danger"
-              style="font-size: 12px"
+              <template #icon>
+                <DownloadOutlined />
+              </template>
+              下载 PNG
+            </a-button>
+            <a-button
+              size="small"
+              type="primary"
+              :disabled="!hasGeneratedImage"
+              @click="handleDownloadSvg"
             >
-              {{ decodeError }}
-            </a-typography-text>
+              <template #icon>
+                <DownloadOutlined />
+              </template>
+              下载 SVG
+            </a-button>
+          </a-flex>
+        </a-flex>
+      </PanelCard>
+    </a-col>
 
-            <!-- 操作行 -->
-            <a-flex
-              align="center"
-              :gap="8"
-              style="border-top: 1px solid var(--app-border); padding-top: 8px"
-            >
-              <a-button
-                size="small"
-                type="primary"
-                @click="handleCopyDecoded"
-              >
-                <template #icon>
-                  <CopyOutlined />
-                </template>
-                复制结果
-              </a-button>
-              <a-typography-text
-                v-if="hasDecodedText"
-                type="secondary"
-                style="font-size: 12px"
-              >
-                （{{ decodedText!.length }} 字符）
+    <!-- 右：识别 -->
+    <a-col :xs="24" :md="12" style="height: 100%">
+      <PanelCard icon="ScanOutlined" title="识别二维码" overflow="auto">
+        <template #actions>
+          <a-tag :color="decodeStatusColor" size="small">
+            {{ decodeStatusLabel }}
+          </a-tag>
+          <a-button size="small" type="text" @click="handleClearDecode">
+            <template #icon>
+              <DeleteOutlined />
+            </template>
+            清空
+          </a-button>
+        </template>
+
+        <a-flex vertical :gap="8" style="height: 100%; min-height: 0">
+          <!--
+            使用 a-upload-dragger 实现拖拽上传，框架自带拖拽交互和样式。
+            beforeUpload 钩子拦截上传（不真正上传到服务器），改为本地解码。
+          -->
+          <a-upload-dragger
+            name="file"
+            accept="image/*"
+            :show-upload-list="false"
+            :before-upload="
+              (file: File) => {
+                void handleFile(file);
+                return false;
+              }
+            "
+            style="flex: 0 0 auto"
+          >
+            <a-flex vertical align="center" :gap="6">
+              <ScanOutlined style="font-size: 28px" />
+              <span>点击选择 或 拖拽图片到此处</span>
+              <a-typography-text type="secondary">
+                支持 PNG / JPG / WebP / BMP，单张最大 10MB
               </a-typography-text>
             </a-flex>
+          </a-upload-dragger>
+
+          <a-button
+            size="small"
+            type="primary"
+            :loading="isDecoding"
+            @click="onPickFromClipboard"
+          >
+            <template #icon>
+              <ScanOutlined />
+            </template>
+            从剪贴板读取图片
+          </a-button>
+
+          <!-- 图片预览 -->
+          <a-image
+            v-if="imagePreviewURL"
+            :src="imagePreviewURL"
+            :preview="false"
+            style="max-height: 200px; object-fit: contain"
+          />
+
+          <!-- 解码结果 -->
+          <a-textarea
+            :value="decodedText ?? ''"
+            readonly
+            :allow-clear="false"
+            placeholder="解码结果会显示在这里"
+            style="flex: 1 1 auto; min-height: 80px"
+          />
+          <a-typography-text v-if="decodeError" type="danger">
+            {{ decodeError }}
+          </a-typography-text>
+
+          <a-divider style="margin: 0" />
+
+          <!-- 操作行 -->
+          <a-flex align="center" :gap="8">
+            <a-button
+              size="small"
+              type="primary"
+              :disabled="!hasDecodedText"
+              @click="handleCopyDecoded"
+            >
+              <template #icon>
+                <CopyOutlined />
+              </template>
+              复制结果
+            </a-button>
+            <a-typography-text v-if="hasDecodedText" type="secondary">
+              （{{ decodedText!.length }} 字符）
+            </a-typography-text>
           </a-flex>
-        </PanelCard>
-      </a-col>
-    </a-row>
-  </div>
+        </a-flex>
+      </PanelCard>
+    </a-col>
+  </a-row>
 </template>

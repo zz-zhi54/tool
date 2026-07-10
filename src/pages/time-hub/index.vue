@@ -106,15 +106,6 @@ const tsFields = computed(() => {
     { label: "相对时间", value: r.relativeTime },
   ];
 });
-
-/** 结果行内联样式（与 PanelCard 内部区分的浅色背景） */
-const rowStyle = {
-  border: "1px solid var(--app-border)",
-  borderRadius: "4px",
-  backgroundColor: "var(--app-surface)",
-  padding: "8px 12px",
-  gap: "8px",
-} as const;
 </script>
 
 <template>
@@ -122,7 +113,7 @@ const rowStyle = {
     <!-- 顶部状态条：标题 + 实时时钟 -->
     <a-card size="small" :body-style="{ padding: '4px 12px' }">
       <a-flex align="center" :gap="8">
-        <span style="font-weight: 500">时间工具</span>
+        <strong>时间工具</strong>
         <a-tag color="blue" size="small">{{ currentTime.localTime }}</a-tag>
         <a-tag color="cyan" size="small">
           {{ currentTime.timestampSeconds }}
@@ -140,20 +131,14 @@ const rowStyle = {
             placeholder="输入时间戳（如 1718179200）或日期字符串（如 2024-06-12）"
             style="flex: 1 1 auto"
           />
-          <a-button size="small" type="text" @click="handleFillNow">
-            现在
-          </a-button>
+          <a-button size="small" type="text" @click="handleFillNow"
+            >现在</a-button
+          >
         </a-flex>
         <a-flex align="center" :gap="8">
-          <span
-            style="
-              color: var(--app-text-muted);
-              min-width: 64px;
-              font-size: 12px;
-            "
-          >
+          <a-typography-text type="secondary" style="min-width: 64px">
             源时区
-          </span>
+          </a-typography-text>
           <a-select
             v-model:value="sourceTimezone"
             size="small"
@@ -171,88 +156,84 @@ const rowStyle = {
         />
 
         <!-- 时间戳字段 -->
-        <a-flex
+        <a-card
           v-for="field in tsFields"
           :key="field.label"
-          align="center"
-          :style="rowStyle"
+          size="small"
+          :body-style="{ padding: '4px 8px' }"
         >
-          <span
-            style="
-              min-width: 140px;
-              color: var(--app-text-muted);
-              font-size: 12px;
-            "
-          >
-            {{ field.label }}
-          </span>
-          <span style="flex: 1 1 auto; word-break: break-all; font-weight: 500">
-            {{ field.value }}
-          </span>
-          <a-button size="small" type="text" @click="handleCopy(field.value)">
-            <template #icon>
-              <CopyOutlined />
-            </template>
-          </a-button>
-        </a-flex>
+          <a-flex align="center" :gap="8">
+            <a-typography-text type="secondary" style="min-width: 140px">
+              {{ field.label }}
+            </a-typography-text>
+            <a-typography-text
+              style="flex: 1 1 auto; word-break: break-all"
+              copyable
+            >
+              {{ field.value }}
+            </a-typography-text>
+            <a-button size="small" type="text" @click="handleCopy(field.value)">
+              <template #icon>
+                <CopyOutlined />
+              </template>
+            </a-button>
+          </a-flex>
+        </a-card>
 
         <!-- 各时区列表 -->
         <template v-if="tzResult">
-          <a-flex align="center" :style="rowStyle">
-            <span
-              style="
-                min-width: 100px;
-                color: var(--app-text-muted);
-                font-size: 12px;
-              "
-            >
-              秒
-            </span>
-            <span
-              style="flex: 1 1 auto; word-break: break-all; font-weight: 500"
-            >
-              {{ tzResult.timestampSeconds }}
-            </span>
-            <a-button
-              size="small"
-              type="text"
-              @click="handleCopy(String(tzResult.timestampSeconds))"
-            >
-              <template #icon>
-                <CopyOutlined />
-              </template>
-            </a-button>
-          </a-flex>
-          <a-flex
+          <a-card size="small" :body-style="{ padding: '4px 8px' }">
+            <a-flex align="center" :gap="8">
+              <a-typography-text type="secondary" style="min-width: 100px">
+                秒
+              </a-typography-text>
+              <a-typography-text
+                style="flex: 1 1 auto; word-break: break-all"
+                copyable
+              >
+                {{ tzResult.timestampSeconds }}
+              </a-typography-text>
+              <a-button
+                size="small"
+                type="text"
+                @click="handleCopy(String(tzResult.timestampSeconds))"
+              >
+                <template #icon>
+                  <CopyOutlined />
+                </template>
+              </a-button>
+            </a-flex>
+          </a-card>
+          <a-card
             v-for="row in tzResult.rows"
             :key="row.id"
-            align="center"
-            :style="rowStyle"
+            size="small"
+            :body-style="{ padding: '4px 8px' }"
           >
-            <div style="min-width: 160px">
-              <div style="font-weight: 500">{{ row.label }}</div>
-              <div style="color: var(--app-text-muted); font-size: 12px">
-                {{ row.id }} · {{ row.offset }}
-              </div>
-            </div>
-            <div style="flex: 1 1 auto; min-width: 180px">
-              <div style="font-weight: 500">
-                {{ row.localTime }}
-              </div>
-              <div style="color: var(--app-text-muted); font-size: 12px">
-                {{ row.time24 }} · {{ row.relativeTime }}
-              </div>
-            </div>
-            <a-button
-              size="small"
-              type="text"
-              @click="handleCopy(row.localTime)"
-            >
-              <template #icon>
-                <CopyOutlined />
-              </template>
-            </a-button>
-          </a-flex>
+            <a-flex align="center" :gap="8">
+              <a-flex vertical style="min-width: 160px">
+                <strong>{{ row.label }}</strong>
+                <a-typography-text type="secondary">
+                  {{ row.id }} · {{ row.offset }}
+                </a-typography-text>
+              </a-flex>
+              <a-flex vertical style="flex: 1 1 auto; min-width: 180px">
+                <strong>{{ row.localTime }}</strong>
+                <a-typography-text type="secondary">
+                  {{ row.time24 }} · {{ row.relativeTime }}
+                </a-typography-text>
+              </a-flex>
+              <a-button
+                size="small"
+                type="text"
+                @click="handleCopy(row.localTime)"
+              >
+                <template #icon>
+                  <CopyOutlined />
+                </template>
+              </a-button>
+            </a-flex>
+          </a-card>
         </template>
       </a-flex>
     </PanelCard>

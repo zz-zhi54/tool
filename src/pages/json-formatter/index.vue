@@ -93,12 +93,12 @@ function handleClear() {
 <template>
   <a-flex
     vertical
-    gap="small"
+    :gap="8"
     style="height: 100%; padding: 8px; box-sizing: border-box"
   >
     <a-card size="small" :body-style="{ padding: '4px 12px' }">
-      <a-flex align="center" gap="small" wrap>
-        <span class="ant-typography">JSON 格式化</span>
+      <a-flex align="center" :gap="8" wrap>
+        <strong>JSON 格式化</strong>
 
         <a-tag
           :color="
@@ -115,47 +115,31 @@ function handleClear() {
 
         <a-tag color="cyan" size="small">{{ stats.lines }} 行</a-tag>
 
-        <div style="flex: 1 1 auto" />
+        <a-flex :flex="'1 1 auto'" />
 
-        <a-flex align="center" gap="small" wrap style="flex-shrink: 0">
-          <a-button
-            size="small"
-            type="primary"
-            @click="handleFormat"
-          >
+        <a-flex align="center" :gap="8" wrap>
+          <a-button size="small" type="primary" @click="handleFormat">
             <template #icon>
               <CheckCircleOutlined />
             </template>
             格式化
           </a-button>
 
-          <a-button
-            size="small"
-            type="default"
-            @click="handleMinify"
-          >
+          <a-button size="small" type="default" @click="handleMinify">
             <template #icon>
               <CompressOutlined />
             </template>
             压缩
           </a-button>
 
-          <a-button
-            size="small"
-            type="primary"
-            @click="handleCopy"
-          >
+          <a-button size="small" type="primary" @click="handleCopy">
             <template #icon>
               <CopyOutlined />
             </template>
             复制
           </a-button>
 
-          <a-button
-            size="small"
-            type="default"
-            @click="handleClear"
-          >
+          <a-button size="small" type="default" @click="handleClear">
             <template #icon>
               <DeleteOutlined />
             </template>

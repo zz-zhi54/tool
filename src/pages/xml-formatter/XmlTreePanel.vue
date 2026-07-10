@@ -3,7 +3,7 @@ import { computed, nextTick, ref, useTemplateRef, watch } from "vue";
 
 import { SearchOutlined } from "@ant-design/icons-vue";
 
-import PanelCard from "../../components/PanelCard.vue";
+import OutputPanel from "../../components/OutputPanel.vue";
 import type { XmlNode } from "../../tools/xml/xmlTypes";
 
 /**
@@ -137,7 +137,7 @@ function collectExpandableIds(nodes: XmlTreeNode[]): string[] {
 </script>
 
 <template>
-  <PanelCard icon="ApartmentOutlined" title="结构视图">
+  <OutputPanel icon="ApartmentOutlined" title="结构视图">
     <template #actions>
       <a-button size="small" type="text" @click.stop="toggleSearch">
         <template #icon>
@@ -161,7 +161,6 @@ function collectExpandableIds(nodes: XmlTreeNode[]): string[] {
       allow-clear
       placeholder="搜索标签、属性或值"
       size="small"
-      style="margin-bottom: 8px"
     />
 
     <a-empty
@@ -182,33 +181,26 @@ function collectExpandableIds(nodes: XmlTreeNode[]): string[] {
       :block-node="true"
       :selectable="false"
       :virtual="false"
-      style="overflow: auto; flex: 1"
+      style="overflow: auto; flex: 1 1 auto; min-height: 0"
     >
       <template #title="{ label, type, value, attrs }">
-        <span style="font-weight: 500">{{ label }}</span>
+        <strong>{{ label }}</strong>
         <a-tag style="margin-left: 4px" size="small">{{ type }}</a-tag>
-        <span
+        <a-typography-text
           v-if="attrs"
-          style="
-            margin-left: 4px;
-            color: var(--app-text-muted);
-            font-size: 12px;
-          "
+          type="secondary"
+          style="margin-left: 4px"
         >
           {{ attrs }}
-        </span>
-        <span
+        </a-typography-text>
+        <a-typography-text
           v-if="value"
-          style="
-            margin-left: 4px;
-            color: var(--app-text-muted);
-            font-size: 12px;
-            word-break: break-all;
-          "
+          type="secondary"
+          style="margin-left: 4px; word-break: break-all"
         >
           {{ value }}
-        </span>
+        </a-typography-text>
       </template>
     </a-tree>
-  </PanelCard>
+  </OutputPanel>
 </template>

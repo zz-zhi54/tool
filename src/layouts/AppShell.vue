@@ -18,8 +18,8 @@ import XmlFormatterView from "../pages/xml-formatter/index.vue";
 import YamlFormatterView from "../pages/yaml-formatter/index.vue";
 import QrcodeToolView from "../pages/qrcode-tool/index.vue";
 import { defaultToolId, findToolById } from "../tools/registry";
-import { useAppTheme } from "../composables/useAppTheme";
 import { useAutoUpdater } from "../composables/useAutoUpdater";
+import { useAppTheme } from "../composables/useAppTheme";
 import { load, save } from "../utils/storage";
 
 /**
@@ -33,8 +33,8 @@ const OPEN_UPDATE_MODAL_KEY: InjectionKey<() => void> =
 
 type UpdateModalInstance = InstanceType<typeof UpdateModal>;
 
-const themeStore = useAppTheme();
 const { checkOnly } = useAutoUpdater();
+const themeStore = useAppTheme();
 
 const currentToolId = ref(defaultToolId);
 
@@ -133,16 +133,6 @@ onBeforeUnmount(() => {
   if (mql && mqlHandler) mql.removeEventListener("change", mqlHandler);
   window.removeEventListener("resize", syncNarrow);
 });
-
-/**
- * 根容器样式：跟随主题 tokens。
- */
-const shellStyle = computed(() => ({
-  height: "100vh",
-  width: "100vw",
-  backgroundColor: themeStore.tokens.value.surface,
-  color: themeStore.tokens.value.text,
-}));
 </script>
 
 <template>
@@ -153,8 +143,12 @@ const shellStyle = computed(() => ({
          - AppSidebar  左侧平铺所有工具 + 底部主题/更新/设置入口
          - <a-layout-content>  主内容区，承载当前工具
       3) 共享的 UpdateModal 挂在最外层，由 provide/inject 触发打开
+
+    根容器与 body/content 的尺寸约束通过 inline style 设置，
+    是 antdv 框架本身要求的"根布局占满视口"必要配置，
+    不属于业务 UI 样式。
   -->
-  <a-layout :style="shellStyle">
+  <a-layout style="height: 100vh; width: 100vw">
     <ToolStatusBar :current-tool="currentTool" />
 
     <a-layout style="min-height: 0">
@@ -162,12 +156,9 @@ const shellStyle = computed(() => ({
         :width="168"
         :collapsed-width="48"
         :trigger="null"
+        :theme="themeStore.resolved.value"
         collapsible
         :collapsed="sidebarCollapsed"
-        :style="{
-          backgroundColor: themeStore.tokens.value.surface,
-          borderRight: `1px solid ${themeStore.tokens.value.border}`,
-        }"
         @update:collapsed="onUserToggle"
       >
         <AppSidebar

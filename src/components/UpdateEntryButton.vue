@@ -48,6 +48,12 @@ const isUpToDate = computed(() => status.value === "up-to-date");
 const newVersion = computed(() => info.value?.version ?? "");
 const isChecking = computed(() => status.value === "checking");
 
+/** 状态对应按钮 type（颜色由 antdv 框架主题控制）。 */
+const buttonType = computed<"primary" | "default" | "text">(() => {
+  if (hasUpdate.value) return "primary";
+  return "text";
+});
+
 const tooltip = computed(() => {
   if (hasUpdate.value && newVersion.value) {
     return `有新版本 v${newVersion.value} 可安装`;
@@ -67,20 +73,13 @@ function onClick() {
 
 <template>
   <a-tooltip :title="tooltip" placement="right">
-    <a-badge
-      :dot="hasUpdate"
-      :offset="[-2, 2]"
-      :number-style="{ backgroundColor: '#d4380d' }"
-    >
+    <a-badge :dot="hasUpdate" :offset="[-2, 2]">
       <a-button
         block
         size="small"
-        type="text"
-        :class="{
-          'is-update-available': hasUpdate,
-          'is-update-up-to-date': isUpToDate,
-          'is-checking': isChecking,
-        }"
+        :type="buttonType"
+        :danger="hasUpdate"
+        :loading="isChecking"
         data-tauri-no-drag
         @click="onClick"
       >
@@ -89,34 +88,11 @@ function onClick() {
           <CheckCircleOutlined v-else-if="isUpToDate" />
           <CloudDownloadOutlined v-else />
         </template>
-        <span v-if="!props.collapsed" class="sidebar-footer-label">
+        <span v-if="!props.collapsed">
           更新 ·
-          <span class="sidebar-footer-value">v{{ appVersion }}</span>
+          <strong>v{{ appVersion }}</strong>
         </span>
       </a-button>
     </a-badge>
   </a-tooltip>
 </template>
-
-<style scoped>
-/* 有新版本：图标 + 文字变红 */
-:deep(.is-update-available) {
-  color: #d4380d;
-}
-:deep(.is-update-available .ant-btn-icon) {
-  color: #d4380d !important;
-}
-
-/* 已是最新：图标 + 文字变绿（用 antdv success 色，浅/深主题都跟手） */
-:deep(.is-update-up-to-date) {
-  color: #52c41a;
-}
-:deep(.is-update-up-to-date .ant-btn-icon) {
-  color: #52c41a !important;
-}
-
-/* 检查中：按钮跟着 status 转 loading 视觉 */
-:deep(.is-checking) {
-  cursor: progress;
-}
-</style>

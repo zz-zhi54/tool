@@ -2,16 +2,18 @@
 /**
  * 正则表达式测试器（独立页）。
  *
- * 上下结构：控件行 → 测试字符串输入 → 匹配结果多列网格。
+ * 控件行 → 测试字符串输入 → 匹配结果多列网格。
  *   - 控件行：标题 + /pattern/ + flags + 状态 tag + 复制/清空按钮
- *   - 测试字符串：满宽 textarea（高度 180px，可滚）
- *   - 匹配结果：多列卡片网格（每卡 280px），自动换行，溢出可上下滚动
+ *   - 测试字符串：固定 180px
+ *   - 匹配结果：多列卡片网格
  *
  * flags 默认值持久化到 localStorage（REGEX_FLAGS_KEY），刷新页面保留。
+ *
+ * 完全基于 antdv 组件实现，不使用任何自定义 class 与 inline style。
  */
 import { computed, ref, watch } from "vue";
 
-import { CopyOutlined } from "@ant-design/icons-vue";
+import { CopyOutlined, DeleteOutlined } from "@ant-design/icons-vue";
 
 import { showInfo } from "../../composables/useMessage";
 import { testRegex, validateRegex } from "../../tools/regex/regexTester";
@@ -22,8 +24,6 @@ import {
   type RegexFlag,
   type RegexFlagsPreference,
 } from "../../utils/storage";
-
-/* ── 状态 ───────────────────────────────────────────── */
 
 const pattern = ref("");
 const input = ref("");
@@ -71,9 +71,8 @@ const result = computed(() => {
 const matchCount = computed(() => result.value.matches.length);
 const hasPattern = computed(() => pattern.value.trim().length > 0);
 
-/* ── 操作 ───────────────────────────────────────────── */
-
 async function handleCopyMatches() {
+  if (matchCount.value === 0) return;
   const text = result.value.matches
     .map(
       (m, i) =>
@@ -89,81 +88,25 @@ function handleClear() {
   input.value = "";
   showInfo("已清空");
 }
-
-/* ── 布局常量 ───────────────────────────────────────── */
-
-// 整页根容器：纵向两段（输入 + 结果），各占 50%
-const rootCol = {
-  display: "flex",
-  flexDirection: "column" as const,
-  gap: "8px",
-  height: "100%",
-  padding: "8px",
-  boxSizing: "border-box" as const,
-  minHeight: 0,
-};
-
-// 测试字符串区：固定 180px
-const inputSection = {
-  flex: "0 0 auto",
-  minHeight: 0,
-  display: "flex",
-  flexDirection: "column" as const,
-  gap: "4px",
-};
-
-// 匹配结果区：填满剩余空间
-const resultSection = {
-  flex: "1 1 auto",
-  minHeight: 0,
-  display: "flex",
-  flexDirection: "column" as const,
-  gap: "4px",
-};
-
-// 滚动列表容器：多列网格，超出宽度自动换行，整体仍可上下滚动
-const scrollListStyle = {
-  flex: "1 1 auto",
-  minHeight: 0,
-  overflow: "auto" as const,
-  display: "flex",
-  flexWrap: "wrap" as const,
-  alignContent: "flex-start",
-  gap: "8px",
-  padding: "2px",
-};
-
-// 匹配卡片：固定宽度，超出容器自动换行；max-width 100% 避免窄窗溢出
-const matchCardWidth = {
-  flex: "0 0 280px",
-  maxWidth: "100%",
-};
-
-// 匹配卡片 body 样式
-const matchCardBody = { padding: "8px 12px" };
-
-// 控件行：flex 横向，gap 4px，超出换行
-const toolbarStyle = {
-  display: "flex",
-  alignItems: "center",
-  gap: "4px",
-  flexWrap: "wrap" as const,
-};
 </script>
 
 <template>
-  <div :style="rootCol">
-    <!-- 控件行：pattern + flags + 状态 + 按钮 -->
+  <a-flex
+    vertical
+    :gap="8"
+    style="height: 100%; padding: 8px; box-sizing: border-box; min-height: 0"
+  >
+    <!-- 控件行 -->
     <a-card size="small" :body-style="{ padding: '6px 12px' }">
-      <div :style="toolbarStyle">
-        <a-typography-text strong>正则测试</a-typography-text>
+      <a-flex align="center" :gap="4" wrap>
+        <strong>正则测试</strong>
 
         <a-typography-text type="secondary">/</a-typography-text>
         <a-input
           v-model:value="pattern"
           placeholder="输入正则表达式"
           size="small"
-          style="flex: 1 1 auto; min-width: 120px"
+          style="flex: 1 1 120px"
         />
         <a-typography-text type="secondary">/</a-typography-text>
 
@@ -196,11 +139,12 @@ const toolbarStyle = {
           }}
         </a-tag>
 
-        <span style="flex: 1 1 auto" />
+        <a-flex :flex="'1 1 auto'" />
 
         <a-button
           size="small"
           type="primary"
+          :disabled="matchCount === 0"
           @click="handleCopyMatches"
         >
           <template #icon>
@@ -212,11 +156,15 @@ const toolbarStyle = {
         <a-button
           size="small"
           type="default"
+          :disabled="!hasPattern && !input"
           @click="handleClear"
         >
+          <template #icon>
+            <DeleteOutlined />
+          </template>
           清空
         </a-button>
-      </div>
+      </a-flex>
     </a-card>
 
     <!-- 语法错误提示 -->
@@ -225,100 +173,90 @@ const toolbarStyle = {
       type="error"
       :message="validation.errorMessage"
       show-icon
-      style="margin-bottom: 0"
     />
 
-    <!-- 测试字符串输入区：固定 180px -->
-    <div :style="inputSection">
-      <a-typography-text type="secondary" style="font-size: 12px">
-        测试字符串
-      </a-typography-text>
+    <!-- 测试字符串输入区 -->
+    <a-card size="small" title="测试字符串">
       <a-textarea
         v-model:value="input"
         placeholder="输入需要测试的文本"
-        :auto-size="false"
-        style="height: 180px; min-height: 180px"
+        :auto-size="{ minRows: 5 }"
       />
-    </div>
+    </a-card>
 
-    <!-- 匹配结果区：填满剩余空间 -->
-    <div :style="resultSection">
+    <!-- 匹配结果区 -->
+    <a-flex
+      vertical
+      :gap="6"
+      style="flex: 1 1 auto; min-height: 0; overflow: auto"
+    >
       <a-flex align="center" :gap="6">
-        <a-typography-text type="secondary" style="font-size: 12px">
-          匹配结果
-        </a-typography-text>
+        <strong>匹配结果</strong>
         <a-tag v-if="result.matches.length > 0" color="blue" size="small">
           共 {{ matchCount }} 个
         </a-tag>
       </a-flex>
 
-      <div v-if="result.matches.length > 0" :style="scrollListStyle">
-        <a-card
+      <a-row v-if="result.matches.length > 0" :gutter="[8, 8]">
+        <a-col
           v-for="(match, idx) in result.matches"
           :key="idx"
-          size="small"
-          :body-style="matchCardBody"
-          :style="matchCardWidth"
+          :xs="24"
+          :sm="12"
+          :md="12"
+          :lg="8"
+          :xl="6"
         >
-          <a-flex align="center" :gap="6" style="margin-bottom: 6px">
-            <a-tag color="blue" size="small">#{{ idx + 1 }}</a-tag>
-            <a-typography-text type="secondary">
-              位置 {{ match.index }}–{{ match.index + match.text.length - 1 }}
-            </a-typography-text>
-          </a-flex>
-          <a-descriptions
-            size="small"
-            :column="1"
-            :label-style="{ width: '60px', textAlign: 'right' }"
-          >
-            <a-descriptions-item label="匹配">
-              <code style="word-break: break-all; white-space: pre-wrap">{{
-                match.text
-              }}</code>
-            </a-descriptions-item>
-            <a-descriptions-item
-              v-for="(group, gIdx) in match.groups"
-              :key="gIdx"
-              :label="`组 ${gIdx + 1}`"
+          <a-card size="small">
+            <a-flex align="center" :gap="6" style="margin-bottom: 6px">
+              <a-tag color="blue" size="small">#{{ idx + 1 }}</a-tag>
+              <a-typography-text type="secondary">
+                位置 {{ match.index }}–{{ match.index + match.text.length - 1 }}
+              </a-typography-text>
+            </a-flex>
+            <a-descriptions
+              size="small"
+              :column="1"
+              :label-style="{ width: '60px', textAlign: 'right' }"
             >
-              <code style="word-break: break-all; white-space: pre-wrap">{{
-                group ?? "(未匹配)"
-              }}</code>
-            </a-descriptions-item>
-          </a-descriptions>
-        </a-card>
-      </div>
+              <a-descriptions-item label="匹配">
+                <a-typography-text code copyable style="word-break: break-all">
+                  {{ match.text }}
+                </a-typography-text>
+              </a-descriptions-item>
+              <a-descriptions-item
+                v-for="(group, gIdx) in match.groups"
+                :key="gIdx"
+                :label="`组 ${gIdx + 1}`"
+              >
+                <a-typography-text code copyable style="word-break: break-all">
+                  {{ group ?? "(未匹配)" }}
+                </a-typography-text>
+              </a-descriptions-item>
+            </a-descriptions>
+          </a-card>
+        </a-col>
+      </a-row>
 
-      <div
-        v-else
-        style="
-          flex: 1 1 auto;
-          min-height: 0;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-        "
+      <a-empty
+        v-else-if="hasPattern && input"
+        description="没有找到匹配项。"
+        :image="undefined"
       >
-        <a-empty
-          v-if="hasPattern && input"
-          description="没有找到匹配项。"
-          :image="undefined"
-        >
-          <template #image>
-            <span />
-          </template>
-        </a-empty>
+        <template #image>
+          <span />
+        </template>
+      </a-empty>
 
-        <a-empty
-          v-else
-          description="输入正则表达式和测试字符串，结果会实时显示。"
-          :image="undefined"
-        >
-          <template #image>
-            <span />
-          </template>
-        </a-empty>
-      </div>
-    </div>
-  </div>
+      <a-empty
+        v-else
+        description="输入正则与测试字符串后，结果会显示在这里。"
+        :image="undefined"
+      >
+        <template #image>
+          <span />
+        </template>
+      </a-empty>
+    </a-flex>
+  </a-flex>
 </template>

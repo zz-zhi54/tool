@@ -92,7 +92,6 @@ async function onRelaunch() {
       vertical
       align="center"
       :gap="12"
-      style="padding: 12px 0"
     >
       <a-spin v-if="status === 'checking'" />
       <span>正在检查更新…</span>
@@ -104,40 +103,32 @@ async function onRelaunch() {
       vertical
       align="center"
       :gap="8"
-      style="padding: 12px 0"
     >
-      <span style="font-weight: 500">已是最新版本</span>
-      <a-typography-text type="secondary" style="font-size: 12px">
+      <a-typography-title :level="5" style="margin: 0">
+        已是最新版本
+      </a-typography-title>
+      <a-typography-text type="secondary">
         当前已是 v{{ appVersion }}，无需更新。
       </a-typography-text>
       <a-button type="primary" @click="open = false">好的</a-button>
     </a-flex>
 
     <!-- 发现新版本 -->
-    <a-flex
-      v-else-if="status === 'available'"
-      vertical
-      :gap="12"
-      style="padding: 8px 0"
-    >
+    <a-flex v-else-if="status === 'available'" vertical :gap="12">
       <span>
         发现新版本 <strong>v{{ info?.version }}</strong>
       </span>
-      <div
+      <!--
+        版本说明容器：高度约束 (max-height) 是必要的滚动行为，
+        保留 inline style。
+      -->
+      <a-alert
         v-if="info?.notes"
-        style="
-          color: var(--app-text-muted);
-          max-height: 200px;
-          overflow: auto;
-          white-space: pre-wrap;
-          border: 1px solid var(--app-border);
-          border-radius: 4px;
-          padding: 8px;
-          font-size: 12px;
-        "
-      >
-        {{ info.notes }}
-      </div>
+        type="info"
+        :message="info.notes"
+        show-icon
+        style="max-height: 200px; overflow: auto"
+      />
       <a-flex :gap="8" justify="flex-end">
         <a-button @click="open = false">稍后</a-button>
         <a-button
@@ -152,26 +143,17 @@ async function onRelaunch() {
     </a-flex>
 
     <!-- 下载中 -->
-    <a-flex
-      v-else-if="status === 'downloading'"
-      vertical
-      :gap="12"
-      style="padding: 12px 0"
-    >
+    <a-flex v-else-if="status === 'downloading'" vertical :gap="12">
       <span>正在下载 v{{ info?.version }}…</span>
       <a-progress :percent="progress" />
     </a-flex>
 
     <!-- 下载完成 -->
-    <a-flex
-      v-else-if="status === 'ready'"
-      vertical
-      align="center"
-      :gap="12"
-      style="padding: 12px 0"
-    >
-      <span style="font-weight: 500">下载完成</span>
-      <a-typography-text type="secondary" style="font-size: 12px">
+    <a-flex v-else-if="status === 'ready'" vertical align="center" :gap="12">
+      <a-typography-title :level="5" style="margin: 0">
+        下载完成
+      </a-typography-title>
+      <a-typography-text type="secondary">
         点击「立即重启」应用更新。
       </a-typography-text>
       <a-button type="primary" @click="onRelaunch">
@@ -181,16 +163,12 @@ async function onRelaunch() {
     </a-flex>
 
     <!-- 失败 -->
-    <a-flex
-      v-else-if="status === 'error'"
-      vertical
-      align="center"
-      :gap="12"
-      style="padding: 12px 0"
-    >
-      <span style="color: #d4380d">
-        {{ error ? describeError(error) : "更新失败" }}
-      </span>
+    <a-flex v-else-if="status === 'error'" vertical align="center" :gap="12">
+      <a-alert
+        type="error"
+        show-icon
+        :message="error ? describeError(error) : '更新失败'"
+      />
       <a-button @click="open = false">关闭</a-button>
     </a-flex>
   </a-modal>

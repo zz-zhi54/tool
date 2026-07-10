@@ -110,12 +110,12 @@ onBeforeUnmount(() => {
 <template>
   <a-flex
     vertical
-    gap="small"
+    :gap="8"
     style="height: 100%; padding: 8px; box-sizing: border-box"
   >
     <a-card size="small" :body-style="{ padding: '4px 12px' }">
-      <a-flex align="center" gap="small" wrap>
-        <span class="ant-typography">SQL IN 生成器</span>
+      <a-flex align="center" :gap="8" wrap>
+        <strong>SQL IN 生成器</strong>
 
         <a-tag :color="lineCount > 0 ? 'green' : 'blue'" size="small">
           {{ lineCount > 0 ? `${lineCount} 行数据` : "等待输入" }}
@@ -131,51 +131,40 @@ onBeforeUnmount(() => {
           <a-radio-button value="'">''</a-radio-button>
         </a-radio-group>
 
-        <div style="flex: 1 1 auto" />
+        <a-flex :flex="'1 1 auto'" />
 
-        <a-button
-          size="small"
-          type="primary"
-          @click="handleGenerate"
-        >
+        <a-button size="small" type="primary" @click="handleGenerate">
           生成
         </a-button>
 
-        <a-button
-          size="small"
-          type="primary"
-          @click="handleCopyOutput"
-        >
+        <a-button size="small" type="primary" @click="handleCopyOutput">
           复制输出
         </a-button>
 
-        <a-button
-          size="small"
-          @click="handleClear"
-        >
-          清空
-        </a-button>
+        <a-button size="small" @click="handleClear">清空</a-button>
       </a-flex>
     </a-card>
 
     <SplitPanel style="flex: 1 1 auto">
       <template #top>
         <PanelCard icon="FileTextOutlined" title="输入数据（每行一个值）">
-          <textarea
-            v-model="input"
-            class="app-textarea"
+          <a-textarea
+            v-model:value="input"
+            :allow-clear="false"
             placeholder="粘贴数据，每行一个值，例如：&#10;OGZJAL25110009&#10;OCDS25110025&#10;OWSD25080005"
+            style="flex: 1 1 auto; min-height: 0"
           />
         </PanelCard>
       </template>
 
       <template #bottom>
         <PanelCard icon="RightOutlined" title="SQL IN 语句">
-          <textarea
+          <a-textarea
             :value="output"
-            class="app-textarea"
             readonly
+            :allow-clear="false"
             placeholder="生成的 IN 语句将显示在这里"
+            style="flex: 1 1 auto; min-height: 0"
           />
         </PanelCard>
       </template>

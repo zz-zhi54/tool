@@ -3,7 +3,7 @@ import { computed, nextTick, ref, useTemplateRef, watch } from "vue";
 
 import { SearchOutlined } from "@ant-design/icons-vue";
 
-import PanelCard from "../../components/PanelCard.vue";
+import OutputPanel from "../../components/OutputPanel.vue";
 import type { JsonValue } from "../../tools/json/jsonTypes";
 
 interface JsonTreeNode {
@@ -178,7 +178,7 @@ function collectExpandableIds(nodes: JsonTreeNode[]): string[] {
 </script>
 
 <template>
-  <PanelCard icon="ApartmentOutlined" title="结构视图">
+  <OutputPanel icon="ApartmentOutlined" title="结构视图">
     <template #actions>
       <a-button size="small" type="text" @click.stop="toggleSearch">
         <template #icon>
@@ -202,7 +202,6 @@ function collectExpandableIds(nodes: JsonTreeNode[]): string[] {
       allow-clear
       placeholder="搜索字段或值"
       size="small"
-      style="margin-bottom: 8px"
     />
 
     <a-empty
@@ -224,22 +223,19 @@ function collectExpandableIds(nodes: JsonTreeNode[]): string[] {
       :selectable="false"
       :show-line="false"
       :virtual="false"
-      style="overflow: auto; flex: 1"
+      style="overflow: auto; flex: 1 1 auto; min-height: 0"
     >
       <template #title="{ label, type, value }">
-        <span style="font-weight: 500">{{ label }}</span>
+        <strong>{{ label }}</strong>
         <a-tag style="margin-left: 4px" size="small">{{ type }}</a-tag>
-        <span
+        <a-typography-text
           v-if="value"
-          style="
-            margin-left: 4px;
-            color: var(--app-text-muted);
-            font-size: 12px;
-          "
+          type="secondary"
+          style="margin-left: 4px"
         >
           {{ value }}
-        </span>
+        </a-typography-text>
       </template>
     </a-tree>
-  </PanelCard>
+  </OutputPanel>
 </template>
