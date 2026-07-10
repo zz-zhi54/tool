@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, ref, watch } from "vue";
+import { computed } from "vue";
 import {
   BgColorsOutlined,
   CheckCircleOutlined,
@@ -18,29 +18,21 @@ import type {
   ToolDefinition,
 } from "../types/tool";
 import { type ThemeName, useAppTheme } from "../composables/useAppTheme";
-import { load, save } from "../utils/storage";
 import { getIconByName } from "../utils/icons";
 import UpdateEntryButton from "./UpdateEntryButton.vue";
 
 defineProps<{
   currentToolId: string;
+  /** 是否折叠（由 AppShell 统一下发，与 a-layout-sider 同步） */
+  collapsed: boolean;
 }>();
 
 const emit = defineEmits<{
   selectTool: [toolId: string];
+  toggleCollapsed: [];
 }>();
 
 const themeStore = useAppTheme();
-
-// ── 折叠状态（持久化到 localStorage） ───────────────────
-
-const SIDEBAR_COLLAPSED_KEY = "sidebar:collapsed";
-const isCollapsed = ref<boolean>(load(SIDEBAR_COLLAPSED_KEY, false));
-watch(isCollapsed, (v) => save(SIDEBAR_COLLAPSED_KEY, v));
-
-function toggleCollapsed() {
-  isCollapsed.value = !isCollapsed.value;
-}
 
 // ── 主题切换 ─────────────────────────────────────────────
 
@@ -73,6 +65,10 @@ function selectTool(tool: ToolDefinition) {
   emit("selectTool", tool.id);
 }
 
+function onToggleCollapsed() {
+  emit("toggleCollapsed");
+}
+
 const themeOptions: Array<{
   title: string;
   value: ThemeName;
@@ -94,13 +90,14 @@ function handleThemeClick(info: { key: string | number }) {
   themeStore.change(String(info.key) as ThemeName);
 }
 
-// ── 样式 ──────────────────────────────────────────────────
+// ── 样式（仅背景/边框/文字颜色；宽度由外层 a-layout-sider 决定） ──
 
 const sidebarStyle = computed(() => ({
   backgroundColor: themeStore.tokens.value.surface,
   color: themeStore.tokens.value.text,
   borderRight: `1px solid ${themeStore.tokens.value.border}`,
-  width: isCollapsed.value ? "48px" : "168px",
+  width: "100%",
+  height: "100%",
 }));
 
 const noDragStyle = {
@@ -112,11 +109,11 @@ const noDragStyle = {
   <aside
     :style="sidebarStyle"
     class="app-sidebar"
-    :class="{ 'is-collapsed': isCollapsed }"
+    :class="{ 'is-collapsed': collapsed }"
   >
     <!-- 顶部品牌区 + 折叠按钮 -->
     <div class="app-sidebar-header">
-      <div v-if="!isCollapsed" class="app-sidebar-titles">
+      <div v-if="!collapsed" class="app-sidebar-titles">
         <div class="app-sidebar-title">工具工作台</div>
         <div class="app-sidebar-subtitle">共 {{ tools.length }} 个工具</div>
       </div>
@@ -126,11 +123,11 @@ const noDragStyle = {
         type="text"
         :style="noDragStyle"
         data-tauri-no-drag
-        :title="isCollapsed ? '展开侧边栏' : '收起侧边栏'"
-        @click="toggleCollapsed"
+        :title="collapsed ? '展开侧边栏' : '收起侧边栏'"
+        @click="onToggleCollapsed"
       >
         <template #icon>
-          <LeftOutlined v-if="!isCollapsed" />
+          <LeftOutlined v-if="!collapsed" />
           <RightOutlined v-else />
         </template>
       </a-button>
@@ -141,7 +138,7 @@ const noDragStyle = {
       <div v-for="group in groupedTools" :key="group.id" class="sidebar-group">
         <!-- 分组标题（折叠时显示为细分隔线） -->
         <div
-          v-if="!isCollapsed"
+          v-if="!collapsed"
           class="sidebar-group-title"
           :style="{ color: group.accent }"
         >
@@ -161,7 +158,7 @@ const noDragStyle = {
           :class="{ 'sidebar-item-active': currentToolId === tool.id }"
           :style="{ '--accent': getToolAccent(tool) }"
           :disabled="tool.status === 'planned'"
-          :title="isCollapsed ? tool.title : ''"
+          :title="collapsed ? tool.title : ''"
           @click="selectTool(tool)"
         >
           <component
@@ -169,7 +166,7 @@ const noDragStyle = {
             class="sidebar-item-icon"
             :style="{ color: getToolAccent(tool) }"
           />
-          <span v-if="!isCollapsed" class="sidebar-item-label">{{
+          <span v-if="!collapsed" class="sidebar-item-label">{{
             tool.title
           }}</span>
         </button>
@@ -185,16 +182,16 @@ const noDragStyle = {
           type="text"
           :style="noDragStyle"
           data-tauri-no-drag
-          :title="isCollapsed ? `主题 · ${currentThemeLabel}` : ''"
+          :title="collapsed ? `主题 · ${currentThemeLabel}` : ''"
         >
           <template #icon>
             <BgColorsOutlined />
           </template>
-          <span v-if="!isCollapsed" class="sidebar-footer-label">
+          <span v-if="!collapsed" class="sidebar-footer-label">
             主题 ·
             <span class="sidebar-footer-value">{{ currentThemeLabel }}</span>
           </span>
-          <DownOutlined v-if="!isCollapsed" class="sidebar-chevron" />
+          <DownOutlined v-if="!collapsed" class="sidebar-chevron" />
         </a-button>
         <template #overlay>
           <a-menu :selected-keys="selectedThemeKeys" @click="handleThemeClick">
@@ -208,7 +205,7 @@ const noDragStyle = {
         </template>
       </a-dropdown>
 
-      <UpdateEntryButton variant="sidebar" :collapsed="isCollapsed" />
+      <UpdateEntryButton variant="sidebar" :collapsed="collapsed" />
 
       <a-button
         block
@@ -216,13 +213,13 @@ const noDragStyle = {
         type="text"
         :style="noDragStyle"
         data-tauri-no-drag
-        :title="isCollapsed ? '设置' : ''"
+        :title="collapsed ? '设置' : ''"
         @click="emit('selectTool', '__settings')"
       >
         <template #icon>
           <SettingOutlined />
         </template>
-        <span v-if="!isCollapsed">设置</span>
+        <span v-if="!collapsed">设置</span>
       </a-button>
     </div>
   </aside>
@@ -230,13 +227,12 @@ const noDragStyle = {
 
 <style scoped>
 /*
- * 侧边栏整体：可展开（200px）/ 折叠（48px）。
- * 折叠态只显示图标，给主内容区让出 ~150px。
+ * 侧边栏整体：宽度由外层 a-layout-sider 决定（168 / 48）。
+ * 这里只负责内部布局。
  */
 .app-sidebar {
   display: flex;
   flex-direction: column;
-  flex: 0 0 auto;
   min-height: 0;
   min-width: 0;
   overflow: hidden;
