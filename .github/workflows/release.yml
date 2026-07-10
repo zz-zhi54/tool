@@ -36,9 +36,10 @@ jobs:
         run: echo "version=$(node -p "require('./package.json').version")" >> "$GITHUB_OUTPUT"
 
       - name: 检查同名 tag 是否已存在
+        shell: bash
         run: |
           TAG="v${{ steps.vars.outputs.version }}"
-          if git rev-parse "$TAG" >/dev/null 2>&1; then
+          if git rev-parse --verify --quiet "refs/tags/$TAG" >/dev/null; then
             echo "::error::tag $TAG 已存在，跳过本次发布。请先 bump package.json 版本号再合入 main。"
             exit 1
           fi
