@@ -38,7 +38,7 @@
   },
   "plugins": {
     "updater": {
-      "pubkey": "RWQvIu7AlMsV7syKhJ7efWJWmgsfdW5KJhMtf4DJ8NCJEK6WeevDBBnV",
+      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IEVFMTVDQjk0QzBFRTIyMkYKUldRdkl1N0FsTXNWN3N5S2hKN2VmV0pXbWdzZmRXNUtKaE10ZjRESjhOQ0pFSzZXZWV2REJCblYK",
       "endpoints": [
         "https://github.com/zz-zhi54/tool/releases/latest/download/latest.json"
       ],
