@@ -61,7 +61,7 @@ jobs:
         run: npm ci
 
       - name: Build & publish release
-        uses: tauri-apps/tauri-action@v0
+        uses: tauri-apps/tauri-action@v1
         with:
           tagName: v__VERSION__
           releaseName: 'Tool v__VERSION__'
@@ -83,6 +83,8 @@ jobs:
 
             - macOS 安装包未签名 / 未公证，首次打开需在「系统设置 → 隐私与安全性」点击「仍要打开」。
             - Windows / Linux 安装包未数字签名，杀毒软件可能误报。
-            - 暂未启用应用内自动更新。
+            - 应用内自动更新已启用：在「设置 → 关于 → 检查更新」即可一键升级。
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
