@@ -58,96 +58,103 @@ async function handleCopyAll() {
   await navigator.clipboard.writeText(uuids.value.join("\n"));
   showSuccess("已复制全部 UUID");
 }
+
+const cardStyle = {
+  border: "1px solid var(--app-border)",
+  borderRadius: "4px",
+  backgroundColor: "var(--app-surface)",
+} as const;
+
+const uuidRowStyle = {
+  border: "1px solid var(--app-border)",
+  borderRadius: "4px",
+  backgroundColor: "var(--app-surface)",
+  padding: "4px 8px",
+} as const;
 </script>
 
 <template>
-  <div
-    class="d-flex flex-column ga-2 h-100"
-    style="min-height: 0; overflow: hidden"
+  <a-flex
+    vertical
+    :gap="8"
+    style="
+      height: 100%;
+      min-height: 0;
+      overflow: hidden;
+      padding: 8px;
+      box-sizing: border-box;
+    "
   >
-    <header
-      class="d-flex align-center ga-1 px-2 py-1"
-      style="
-        flex: 0 0 auto;
-        gap: 4px;
-        border: 1px solid var(--app-border);
-        border-radius: 4px;
-        background-color: var(--app-surface);
-      "
-    >
-      <span class="text-body-2 font-weight-medium">UUID 生成器</span>
+    <a-card size="small" :body-style="{ padding: '4px 12px' }">
+      <a-flex align="center" :gap="4" wrap>
+        <span style="font-weight: 500">UUID 生成器</span>
 
-      <a-tag color="cyan" size="small">{{ uuids.length }} 个</a-tag>
+        <a-tag color="cyan" size="small">{{ uuids.length }} 个</a-tag>
 
-      <span style="flex: 1 1 auto" />
+        <div style="flex: 1 1 auto" />
 
-      <a-button
-        :disabled="uuids.length === 0"
-        size="small"
-        type="primary"
-        ghost
-        @click="handleCopyAll"
-      >
-        <template #icon>
-          <CopyOutlined />
-        </template>
-        复制全部
-      </a-button>
+        <a-button
+          size="small"
+          type="primary"
+          @click="handleCopyAll"
+        >
+          <template #icon>
+            <CopyOutlined />
+          </template>
+          复制全部
+        </a-button>
 
-      <a-button
-        :disabled="uuids.length === 0"
-        size="small"
-        type="default"
-        ghost
-        @click="handleClear"
-      >
-        <template #icon>
-          <DeleteOutlined />
-        </template>
-        清空
-      </a-button>
-    </header>
+        <a-button
+          size="small"
+          type="default"
+          @click="handleClear"
+        >
+          <template #icon>
+            <DeleteOutlined />
+          </template>
+          清空
+        </a-button>
+      </a-flex>
+    </a-card>
 
     <!-- 控件区 -->
-    <section
-      class="d-flex flex-column ga-2 px-3 py-2"
-      style="
-        flex: 0 0 auto;
-        border: 1px solid var(--app-border);
-        border-radius: 4px;
-        background-color: var(--app-surface);
-      "
+    <a-card
+      size="small"
+      :body-style="{ padding: '8px 12px' }"
+      :style="cardStyle"
     >
-      <div class="d-flex align-center ga-2 flex-wrap">
-        <span class="text-caption" style="min-width: 60px">版本</span>
-        <a-select
-          v-model:value="version"
-          size="small"
-          style="width: 220px"
-          :options="versionOptions"
-        />
-      </div>
-      <div class="d-flex align-center ga-2 flex-wrap">
-        <span class="text-caption" style="min-width: 60px">数量</span>
-        <a-input-number
-          v-model:value="count"
-          size="small"
-          :min="1"
-          :max="1000"
-          :step="1"
-          style="width: 140px"
-        />
-        <a-checkbox v-model:checked="uppercase">大写</a-checkbox>
-        <a-checkbox v-model:checked="withHyphens">带连字符</a-checkbox>
-        <span style="flex: 1 1 auto" />
-        <a-button size="small" type="primary" ghost @click="handleGenerate">
-          <template #icon>
-            <ReloadOutlined />
-          </template>
-          生成
-        </a-button>
-      </div>
-    </section>
+      <a-flex vertical :gap="8">
+        <a-flex align="center" :gap="8" wrap>
+          <span style="min-width: 60px; font-size: 12px">版本</span>
+          <a-select
+            v-model:value="version"
+            size="small"
+            style="width: 220px"
+            :options="versionOptions"
+          />
+        </a-flex>
+        <a-flex align="center" :gap="8" wrap>
+          <span style="min-width: 60px; font-size: 12px">数量</span>
+          <a-input-number
+            v-model:value="count"
+            size="small"
+            :min="1"
+            :max="1000"
+            :step="1"
+            style="width: 140px"
+          />
+          <a-checkbox v-model:checked="uppercase">大写</a-checkbox>
+          <a-checkbox v-model:checked="withHyphens">带连字符</a-checkbox>
+          <div style="flex: 1 1 auto" />
+          <a-button size="small" type="primary" @click="handleGenerate">
+            <template #icon>
+              <ReloadOutlined />
+            </template>
+            生成
+          </a-button>
+        </a-flex>
+      </a-flex>
+    </a-card>
 
     <!-- 结果区 -->
     <div style="flex: 1 1 auto; min-height: 0; overflow: auto">
@@ -161,15 +168,14 @@ async function handleCopyAll() {
         </template>
       </a-empty>
 
-      <section
+      <a-flex
         v-else
-        class="d-flex flex-column ga-1"
-        style="
-          border: 1px solid var(--app-border);
-          border-radius: 4px;
-          background-color: var(--app-surface);
-          padding: 8px;
-        "
+        vertical
+        :gap="4"
+        :style="{
+          ...cardStyle,
+          padding: '8px',
+        }"
       >
         <textarea
           :value="preview"
@@ -177,22 +183,16 @@ async function handleCopyAll() {
           readonly
           style="min-height: 80px; max-height: 30vh"
         />
-        <div
-          class="d-flex flex-column ga-1"
-          style="max-height: 35vh; overflow: auto"
-        >
-          <div
+        <a-flex vertical :gap="4" style="max-height: 35vh; overflow: auto">
+          <a-flex
             v-for="(id, idx) in uuids"
             :key="idx"
-            class="d-flex align-center ga-2 px-2 py-1"
-            style="
-              border: 1px solid var(--app-border);
-              border-radius: 4px;
-              background-color: var(--app-surface);
-            "
+            align="center"
+            :gap="8"
+            :style="uuidRowStyle"
           >
             <a-tag color="blue" size="small">#{{ idx + 1 }}</a-tag>
-            <code class="text-body-2" style="flex: 1; word-break: break-all">
+            <code style="flex: 1; word-break: break-all; font-size: 14px">
               {{ id }}
             </code>
             <a-button size="small" type="text" @click="handleCopyOne(id)">
@@ -200,9 +200,9 @@ async function handleCopyAll() {
                 <CopyOutlined />
               </template>
             </a-button>
-          </div>
-        </div>
-      </section>
+          </a-flex>
+        </a-flex>
+      </a-flex>
     </div>
-  </div>
+  </a-flex>
 </template>

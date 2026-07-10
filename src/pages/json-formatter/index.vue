@@ -19,7 +19,6 @@ import {
   minifyJson,
   validateJson,
 } from "../../tools/json/jsonFormatter";
-import { PANEL_KEYS } from "../../utils/storage";
 
 const input = ref("");
 
@@ -43,8 +42,6 @@ const parsedValue = computed<JsonValue | undefined>(() => {
 
   return JSON.parse(input.value.trim()) as JsonValue;
 });
-
-const hasInput = computed(() => input.value.trim().length > 0);
 
 /**
  * 在输入框内格式化当前 JSON。
@@ -80,10 +77,6 @@ function handleMinify() {
  * 复制当前输入框中的 JSON。
  */
 async function handleCopy() {
-  if (!hasInput.value) {
-    return;
-  }
-
   await navigator.clipboard.writeText(input.value);
   showInfo("JSON 已复制");
 }
@@ -98,103 +91,88 @@ function handleClear() {
 </script>
 
 <template>
-  <div
-    class="d-flex flex-column ga-2 h-100"
-    style="min-height: 0; overflow: hidden"
+  <a-flex
+    vertical
+    gap="small"
+    style="height: 100%; padding: 8px; box-sizing: border-box"
   >
-    <header
-      class="d-flex align-center ga-1 px-2 py-1"
-      style="
-        flex: 0 0 auto;
-        gap: 4px;
-        border: 1px solid var(--app-border);
-        border-radius: 4px;
-        background-color: var(--app-surface);
-      "
-    >
-      <span class="text-body-2 font-weight-medium">JSON 格式化</span>
+    <a-card size="small" :body-style="{ padding: '4px 12px' }">
+      <a-flex align="center" gap="small" wrap>
+        <span class="ant-typography">JSON 格式化</span>
 
-      <a-tag
-        :color="
-          validation.valid ? 'green' : validation.empty ? 'default' : 'red'
-        "
-        size="small"
-      >
-        {{ validation.valid ? "合法" : validation.empty ? "等待输入" : "错误" }}
-      </a-tag>
+        <a-tag
+          :color="
+            validation.valid ? 'green' : validation.empty ? 'default' : 'red'
+          "
+          size="small"
+        >
+          {{
+            validation.valid ? "合法" : validation.empty ? "等待输入" : "错误"
+          }}
+        </a-tag>
 
-      <a-tag color="cyan" size="small">{{ stats.bytes }} B</a-tag>
+        <a-tag color="cyan" size="small">{{ stats.bytes }} B</a-tag>
 
-      <a-tag color="cyan" size="small">{{ stats.lines }} 行</a-tag>
+        <a-tag color="cyan" size="small">{{ stats.lines }} 行</a-tag>
 
-      <span style="flex: 1 1 auto" />
+        <div style="flex: 1 1 auto" />
 
-      <!-- 操作按钮：格式化、压缩、复制、清空 -->
-      <a-button
-        :disabled="!hasInput"
-        size="small"
-        type="primary"
-        ghost
-        @click="handleFormat"
-      >
-        <template #icon>
-          <CheckCircleOutlined />
-        </template>
-        格式化
-      </a-button>
+        <a-flex align="center" gap="small" wrap style="flex-shrink: 0">
+          <a-button
+            size="small"
+            type="primary"
+            @click="handleFormat"
+          >
+            <template #icon>
+              <CheckCircleOutlined />
+            </template>
+            格式化
+          </a-button>
 
-      <a-button
-        :disabled="!hasInput"
-        size="small"
-        type="default"
-        ghost
-        @click="handleMinify"
-      >
-        <template #icon>
-          <CompressOutlined />
-        </template>
-        压缩
-      </a-button>
+          <a-button
+            size="small"
+            type="default"
+            @click="handleMinify"
+          >
+            <template #icon>
+              <CompressOutlined />
+            </template>
+            压缩
+          </a-button>
 
-      <a-button
-        :disabled="!hasInput"
-        size="small"
-        type="primary"
-        ghost
-        @click="handleCopy"
-      >
-        <template #icon>
-          <CopyOutlined />
-        </template>
-        复制
-      </a-button>
+          <a-button
+            size="small"
+            type="primary"
+            @click="handleCopy"
+          >
+            <template #icon>
+              <CopyOutlined />
+            </template>
+            复制
+          </a-button>
 
-      <a-button
-        :disabled="!hasInput"
-        size="small"
-        type="default"
-        ghost
-        @click="handleClear"
-      >
-        <template #icon>
-          <DeleteOutlined />
-        </template>
-        清空
-      </a-button>
-    </header>
+          <a-button
+            size="small"
+            type="default"
+            @click="handleClear"
+          >
+            <template #icon>
+              <DeleteOutlined />
+            </template>
+            清空
+          </a-button>
+        </a-flex>
+      </a-flex>
+    </a-card>
 
-    <!--
-      工作区：左右面板可拖拽调节大小。
-      storageItem 传入后 SplitPanel 自动持久化比例到 localStorage。
-    -->
-    <SplitPanel :panel-key="PANEL_KEYS.jsonFormatter">
-      <template #left>
+    <SplitPanel style="flex: 1 1 auto">
+      <template #top>
         <InputPanel v-model="input" />
       </template>
 
-      <template #right>
+      <template #bottom>
         <JsonTreePanel :value="parsedValue" />
       </template>
     </SplitPanel>
-  </div>
+  </a-flex>
 </template>

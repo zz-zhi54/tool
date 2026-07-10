@@ -106,35 +106,34 @@ const tsFields = computed(() => {
     { label: "相对时间", value: r.relativeTime },
   ];
 });
+
+/** 结果行内联样式（与 PanelCard 内部区分的浅色背景） */
+const rowStyle = {
+  border: "1px solid var(--app-border)",
+  borderRadius: "4px",
+  backgroundColor: "var(--app-surface)",
+  padding: "8px 12px",
+  gap: "8px",
+} as const;
 </script>
 
 <template>
-  <div
-    class="d-flex flex-column ga-2"
-    style="height: 100%; min-height: 0; overflow: auto"
-  >
+  <a-flex vertical :gap="8" style="height: 100%; min-height: 0; overflow: auto">
     <!-- 顶部状态条：标题 + 实时时钟 -->
-    <header
-      class="d-flex align-center px-2 py-1"
-      style="
-        flex: 0 0 auto;
-        gap: 8px;
-        border: 1px solid var(--app-border);
-        border-radius: 4px;
-        background-color: var(--app-surface);
-      "
-    >
-      <span class="text-body-2 font-weight-medium">时间工具</span>
-      <a-tag color="blue" size="small">{{ currentTime.localTime }}</a-tag>
-      <a-tag color="cyan" size="small">
-        {{ currentTime.timestampSeconds }}
-      </a-tag>
-    </header>
+    <a-card size="small" :body-style="{ padding: '4px 12px' }">
+      <a-flex align="center" :gap="8">
+        <span style="font-weight: 500">时间工具</span>
+        <a-tag color="blue" size="small">{{ currentTime.localTime }}</a-tag>
+        <a-tag color="cyan" size="small">
+          {{ currentTime.timestampSeconds }}
+        </a-tag>
+      </a-flex>
+    </a-card>
 
     <PanelCard icon="ClockCircleOutlined" title="时间 + 时区">
-      <div class="d-flex flex-column ga-3">
+      <a-flex vertical :gap="12">
         <!-- 输入区 -->
-        <div class="d-flex align-center" style="gap: 8px">
+        <a-flex align="center" :gap="8">
           <a-input
             v-model:value="input"
             size="small"
@@ -144,11 +143,14 @@ const tsFields = computed(() => {
           <a-button size="small" type="text" @click="handleFillNow">
             现在
           </a-button>
-        </div>
-        <div class="d-flex align-center" style="gap: 8px">
+        </a-flex>
+        <a-flex align="center" :gap="8">
           <span
-            class="text-caption"
-            style="color: var(--app-text-muted); min-width: 64px"
+            style="
+              color: var(--app-text-muted);
+              min-width: 64px;
+              font-size: 12px;
+            "
           >
             源时区
           </span>
@@ -159,7 +161,7 @@ const tsFields = computed(() => {
             :options="sourceTimezoneOptions"
             show-search
           />
-        </div>
+        </a-flex>
 
         <a-alert
           v-if="invalid"
@@ -169,27 +171,22 @@ const tsFields = computed(() => {
         />
 
         <!-- 时间戳字段 -->
-        <section
+        <a-flex
           v-for="field in tsFields"
           :key="field.label"
-          class="d-flex align-center py-2 px-3"
-          style="
-            border: 1px solid var(--app-border);
-            border-radius: 4px;
-            background-color: var(--app-surface);
-            gap: 8px;
-          "
+          align="center"
+          :style="rowStyle"
         >
           <span
-            class="text-caption"
-            style="min-width: 140px; color: var(--app-text-muted)"
+            style="
+              min-width: 140px;
+              color: var(--app-text-muted);
+              font-size: 12px;
+            "
           >
             {{ field.label }}
           </span>
-          <span
-            class="text-body-2 font-weight-medium"
-            style="flex: 1 1 auto; word-break: break-all"
-          >
+          <span style="flex: 1 1 auto; word-break: break-all; font-weight: 500">
             {{ field.value }}
           </span>
           <a-button size="small" type="text" @click="handleCopy(field.value)">
@@ -197,28 +194,22 @@ const tsFields = computed(() => {
               <CopyOutlined />
             </template>
           </a-button>
-        </section>
+        </a-flex>
 
         <!-- 各时区列表 -->
         <template v-if="tzResult">
-          <section
-            class="d-flex align-center py-2 px-3"
-            style="
-              border: 1px solid var(--app-border);
-              border-radius: 4px;
-              background-color: var(--app-surface);
-              gap: 8px;
-            "
-          >
+          <a-flex align="center" :style="rowStyle">
             <span
-              class="text-caption"
-              style="min-width: 100px; color: var(--app-text-muted)"
+              style="
+                min-width: 100px;
+                color: var(--app-text-muted);
+                font-size: 12px;
+              "
             >
               秒
             </span>
             <span
-              class="text-body-2 font-weight-medium"
-              style="flex: 1 1 auto; word-break: break-all"
+              style="flex: 1 1 auto; word-break: break-all; font-weight: 500"
             >
               {{ tzResult.timestampSeconds }}
             </span>
@@ -231,29 +222,24 @@ const tsFields = computed(() => {
                 <CopyOutlined />
               </template>
             </a-button>
-          </section>
-          <section
+          </a-flex>
+          <a-flex
             v-for="row in tzResult.rows"
             :key="row.id"
-            class="d-flex align-center py-2 px-3"
-            style="
-              border: 1px solid var(--app-border);
-              border-radius: 4px;
-              background-color: var(--app-surface);
-              gap: 8px;
-            "
+            align="center"
+            :style="rowStyle"
           >
             <div style="min-width: 160px">
-              <div class="text-body-2 font-weight-medium">{{ row.label }}</div>
-              <div class="text-caption" style="color: var(--app-text-muted)">
+              <div style="font-weight: 500">{{ row.label }}</div>
+              <div style="color: var(--app-text-muted); font-size: 12px">
                 {{ row.id }} · {{ row.offset }}
               </div>
             </div>
             <div style="flex: 1 1 auto; min-width: 180px">
-              <div class="text-body-2 font-weight-medium">
+              <div style="font-weight: 500">
                 {{ row.localTime }}
               </div>
-              <div class="text-caption" style="color: var(--app-text-muted)">
+              <div style="color: var(--app-text-muted); font-size: 12px">
                 {{ row.time24 }} · {{ row.relativeTime }}
               </div>
             </div>
@@ -266,9 +252,9 @@ const tsFields = computed(() => {
                 <CopyOutlined />
               </template>
             </a-button>
-          </section>
+          </a-flex>
         </template>
-      </div>
+      </a-flex>
     </PanelCard>
-  </div>
+  </a-flex>
 </template>

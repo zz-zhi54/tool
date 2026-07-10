@@ -311,8 +311,9 @@ const textareaFillStyle = { flex: "1 1 auto", minHeight: 0 };
     整页根容器：纵向堆叠 4 个功能节，节之间 ga-2 间距。
     inline style 控制 padding / overflow（必须 inline）。
   -->
-  <div
-    class="d-flex flex-column ga-2"
+  <a-flex
+    vertical
+    :gap="8"
     style="height: 100%; padding: 8px; overflow: auto; box-sizing: border-box"
   >
     <a-card
@@ -321,7 +322,7 @@ const textareaFillStyle = { flex: "1 1 auto", minHeight: 0 };
       size="small"
       :body-style="sectionBodyShort"
     >
-      <div class="d-flex align-center" style="gap: 4px; flex-wrap: wrap">
+      <a-flex align="center" :gap="4" wrap>
         <a-typography-text strong>{{ section.title }}</a-typography-text>
 
         <!--
@@ -351,38 +352,32 @@ const textareaFillStyle = { flex: "1 1 auto", minHeight: 0 };
           {{ statusMap[section.id].label }}
         </a-tag>
 
-        <span style="flex: 1 1 auto" />
+        <div style="flex: 1 1 auto" />
 
         <a-button
-          :disabled="!outputMap[section.id]"
           size="small"
           type="dashed"
-          ghost
           @click="handleSwap(section)"
         >
           交换
         </a-button>
 
         <a-button
-          :disabled="!outputMap[section.id]"
           size="small"
           type="primary"
-          ghost
           @click="handleCopyOutput(section)"
         >
           复制输出
         </a-button>
 
         <a-button
-          :disabled="section.state.input.length === 0"
           size="small"
           type="default"
-          ghost
           @click="handleClear(section)"
         >
           清空
         </a-button>
-      </div>
+      </a-flex>
 
       <div :style="sectionBodyRow">
         <div :style="paneCol">
@@ -414,5 +409,5 @@ const textareaFillStyle = { flex: "1 1 auto", minHeight: 0 };
         </div>
       </div>
     </a-card>
-  </div>
+  </a-flex>
 </template>

@@ -16,10 +16,6 @@ const result = computed(() =>
   }),
 );
 
-const hasInput = computed(
-  () => leftText.value.trim().length > 0 || rightText.value.trim().length > 0,
-);
-
 function getRowStyle(type: string): Record<string, string> {
   switch (type) {
     case "added":
@@ -42,71 +38,66 @@ function handleClear() {
   rightText.value = "";
   showInfo("已清空");
 }
+
+const panelBaseStyle = {
+  flex: 1,
+  minWidth: 0,
+  border: "1px solid var(--app-border)",
+  borderRadius: "4px",
+  backgroundColor: "var(--app-surface)",
+  display: "flex",
+  flexDirection: "column" as const,
+};
+
+const panelHeaderStyle = {
+  borderBottom: "1px solid var(--app-border)",
+  color: "var(--app-text-muted)",
+  padding: "4px 8px",
+  fontSize: "12px",
+};
 </script>
 
 <template>
-  <div
-    class="d-flex flex-column ga-2 h-100"
-    style="min-height: 0; overflow: hidden"
+  <a-flex
+    vertical
+    :gap="8"
+    style="
+      height: 100%;
+      min-height: 0;
+      overflow: hidden;
+      padding: 8px;
+      box-sizing: border-box;
+    "
   >
-    <header
-      class="d-flex align-center ga-1 px-2 py-1 flex-wrap"
-      style="
-        flex: 0 0 auto;
-        gap: 4px;
-        border: 1px solid var(--app-border);
-        border-radius: 4px;
-        background-color: var(--app-surface);
-      "
-    >
-      <span class="text-body-2 font-weight-medium">文本 Diff</span>
+    <a-card size="small" :body-style="{ padding: '4px 12px' }">
+      <a-flex align="center" :gap="4" wrap>
+        <span style="font-weight: 500">文本 Diff</span>
 
-      <a-tag color="green" size="small"> +{{ result.addedCount }} </a-tag>
-      <a-tag color="red" size="small"> -{{ result.removedCount }} </a-tag>
-      <a-tag color="default" size="small"> ={{ result.equalCount }} </a-tag>
+        <a-tag color="green" size="small"> +{{ result.addedCount }} </a-tag>
+        <a-tag color="red" size="small"> -{{ result.removedCount }} </a-tag>
+        <a-tag color="default" size="small"> ={{ result.equalCount }} </a-tag>
 
-      <a-checkbox v-model:checked="ignoreWhitespace">忽略空白</a-checkbox>
+        <a-checkbox v-model:checked="ignoreWhitespace">忽略空白</a-checkbox>
 
-      <span style="flex: 1 1 auto" />
+        <div style="flex: 1 1 auto" />
 
-      <a-button
-        size="small"
-        type="default"
-        ghost
-        :disabled="!hasInput"
-        @click="handleClear"
-      >
-        <template #icon>
-          <DeleteOutlined />
-        </template>
-        清空
-      </a-button>
-    </header>
+        <a-button
+          size="small"
+          type="default"
+          @click="handleClear"
+        >
+          <template #icon>
+            <DeleteOutlined />
+          </template>
+          清空
+        </a-button>
+      </a-flex>
+    </a-card>
 
     <!-- 输入区：左右两个 textarea -->
-    <section
-      class="d-flex ga-2"
-      style="flex: 0 0 auto; height: 200px; min-height: 200px"
-    >
-      <div
-        class="d-flex flex-column"
-        style="
-          flex: 1;
-          min-width: 0;
-          border: 1px solid var(--app-border);
-          border-radius: 4px;
-          background-color: var(--app-surface);
-        "
-      >
-        <div
-          class="d-flex align-center px-2 py-1 text-caption"
-          style="
-            border-bottom: 1px solid var(--app-border);
-            color: var(--app-text-muted);
-          "
-        >
-          原文
-        </div>
+    <a-flex :gap="8" style="flex: 0 0 auto; height: 200px; min-height: 200px">
+      <div :style="panelBaseStyle">
+        <div :style="panelHeaderStyle">原文</div>
         <textarea
           v-model="leftText"
           class="app-textarea"
@@ -114,25 +105,8 @@ function handleClear() {
           style="flex: 1; border: none; border-radius: 0 0 4px 4px"
         />
       </div>
-      <div
-        class="d-flex flex-column"
-        style="
-          flex: 1;
-          min-width: 0;
-          border: 1px solid var(--app-border);
-          border-radius: 4px;
-          background-color: var(--app-surface);
-        "
-      >
-        <div
-          class="d-flex align-center px-2 py-1 text-caption"
-          style="
-            border-bottom: 1px solid var(--app-border);
-            color: var(--app-text-muted);
-          "
-        >
-          新文
-        </div>
+      <div :style="panelBaseStyle">
+        <div :style="panelHeaderStyle">新文</div>
         <textarea
           v-model="rightText"
           class="app-textarea"
@@ -140,11 +114,10 @@ function handleClear() {
           style="flex: 1; border: none; border-radius: 0 0 4px 4px"
         />
       </div>
-    </section>
+    </a-flex>
 
     <!-- 结果区 -->
     <div
-      class="d-flex flex-column"
       style="
         flex: 1 1 auto;
         min-height: 0;
@@ -152,14 +125,17 @@ function handleClear() {
         border-radius: 4px;
         background-color: var(--app-surface);
         overflow: auto;
+        display: flex;
+        flex-direction: column;
       "
     >
       <div
-        class="d-flex align-center px-2 py-1 text-caption"
         style="
           flex: 0 0 auto;
           border-bottom: 1px solid var(--app-border);
           color: var(--app-text-muted);
+          padding: 4px 8px;
+          font-size: 12px;
         "
       >
         差异结果（共 {{ result.lines.length }} 行）
@@ -167,8 +143,14 @@ function handleClear() {
 
       <div
         v-if="result.lines.length === 0"
-        class="d-flex align-center justify-center py-4"
-        style="color: var(--app-text-muted); font-size: 12px"
+        style="
+          flex: 1 1 auto;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          color: var(--app-text-muted);
+          font-size: 12px;
+        "
       >
         <a-empty
           description="在左右两侧输入文本后，结果会实时显示。"
@@ -190,33 +172,33 @@ function handleClear() {
         <div
           v-for="(line, idx) in result.lines"
           :key="idx"
-          class="d-flex"
           :style="{
+            display: 'flex',
             ...getRowStyle(line.type),
             padding: '2px 8px',
             whiteSpace: 'pre',
           }"
         >
           <span
-            class="text-caption"
             style="
               width: 44px;
               color: var(--app-text-muted);
               user-select: none;
               text-align: right;
               padding-right: 6px;
+              font-size: 12px;
             "
           >
             {{ line.oldLineNo ?? "" }}
           </span>
           <span
-            class="text-caption"
             style="
               width: 44px;
               color: var(--app-text-muted);
               user-select: none;
               text-align: right;
               padding-right: 6px;
+              font-size: 12px;
             "
           >
             {{ line.newLineNo ?? "" }}
@@ -232,5 +214,5 @@ function handleClear() {
         </div>
       </div>
     </div>
-  </div>
+  </a-flex>
 </template>

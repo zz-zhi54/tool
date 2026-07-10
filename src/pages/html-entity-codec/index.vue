@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, ref } from "vue";
+import { ref } from "vue";
 
 import PanelCard from "../../components/PanelCard.vue";
 import SplitPanel from "../../components/SplitPanel.vue";
@@ -8,16 +8,11 @@ import {
   decodeHtmlEntities,
   encodeHtmlEntities,
 } from "../../tools/html-entity/htmlEntityCodec";
-import { PANEL_KEYS } from "../../utils/storage";
 
 const input = ref("");
 const output = ref("");
 
-const hasInput = computed(() => input.value.trim().length > 0);
-const hasOutput = computed(() => output.value.length > 0);
-
 function handleEncode() {
-  if (!hasInput.value) return;
   try {
     output.value = encodeHtmlEntities(input.value);
     showSuccess("已编码为 HTML 实体");
@@ -27,7 +22,6 @@ function handleEncode() {
 }
 
 function handleDecode() {
-  if (!hasInput.value) return;
   try {
     output.value = decodeHtmlEntities(input.value);
     showSuccess("已从 HTML 实体解码");
@@ -37,14 +31,12 @@ function handleDecode() {
 }
 
 function handleSwap() {
-  if (!hasOutput.value) return;
   input.value = output.value;
   output.value = "";
   showSuccess("已交换输入和输出");
 }
 
 async function handleCopyOutput() {
-  if (!hasOutput.value) return;
   await navigator.clipboard.writeText(output.value);
   showInfo("输出已复制");
 }
@@ -57,77 +49,61 @@ function handleClear() {
 </script>
 
 <template>
-  <div
-    class="d-flex flex-column ga-2 h-100"
-    style="min-height: 0; overflow: hidden"
+  <a-flex
+    vertical
+    gap="small"
+    style="height: 100%; padding: 8px; box-sizing: border-box"
   >
-    <header
-      class="d-flex align-center ga-1 px-2 py-1"
-      style="
-        flex: 0 0 auto;
-        gap: 4px;
-        border: 1px solid var(--app-border);
-        border-radius: 4px;
-        background-color: var(--app-surface);
-      "
-    >
-      <span class="text-body-2 font-weight-medium">HTML 实体编解码</span>
+    <a-card size="small" :body-style="{ padding: '4px 12px' }">
+      <a-flex align="center" gap="small" wrap>
+        <span class="ant-typography">HTML 实体编解码</span>
 
-      <span style="flex: 1 1 auto" />
+        <div style="flex: 1 1 auto" />
 
-      <a-button
-        :disabled="!hasInput"
-        size="small"
-        type="primary"
-        ghost
-        @click="handleEncode"
-      >
-        编码
-      </a-button>
+        <a-button
+          size="small"
+          type="primary"
+          @click="handleEncode"
+        >
+          编码
+        </a-button>
 
-      <a-button
-        :disabled="!hasInput"
-        size="small"
-        type="default"
-        ghost
-        @click="handleDecode"
-      >
-        解码
-      </a-button>
+        <a-button
+          size="small"
+          type="default"
+          @click="handleDecode"
+        >
+          解码
+        </a-button>
 
-      <a-button
-        :disabled="!hasOutput"
-        size="small"
-        type="dashed"
-        ghost
-        @click="handleSwap"
-      >
-        交换
-      </a-button>
+        <a-button
+          size="small"
+          type="dashed"
+          @click="handleSwap"
+        >
+          交换
+        </a-button>
 
-      <a-button
-        :disabled="!hasOutput"
-        size="small"
-        type="primary"
-        ghost
-        @click="handleCopyOutput"
-      >
-        复制输出
-      </a-button>
+        <a-button
+          size="small"
+          type="primary"
+          @click="handleCopyOutput"
+        >
+          复制输出
+        </a-button>
 
-      <a-button
-        :disabled="!hasInput && !hasOutput"
-        size="small"
-        type="default"
-        ghost
-        @click="handleClear"
-      >
-        清空
-      </a-button>
-    </header>
+        <a-button
+          size="small"
+          type="default"
+          @click="handleClear"
+        >
+          清空
+        </a-button>
+      </a-flex>
+    </a-card>
 
-    <SplitPanel :panel-key="PANEL_KEYS.htmlEntityCodec">
-      <template #left>
+    <SplitPanel style="flex: 1 1 auto">
+      <template #top>
         <PanelCard icon="FileTextOutlined" title="输入文本">
           <textarea
             v-model="input"
@@ -137,7 +113,7 @@ function handleClear() {
         </PanelCard>
       </template>
 
-      <template #right>
+      <template #bottom>
         <PanelCard icon="RightOutlined" title="输出结果">
           <textarea
             :value="output"
@@ -148,5 +124,5 @@ function handleClear() {
         </PanelCard>
       </template>
     </SplitPanel>
-  </div>
+  </a-flex>
 </template>

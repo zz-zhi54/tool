@@ -1,8 +1,9 @@
 <script setup lang="ts">
 import { computed, nextTick, ref, useTemplateRef, watch } from "vue";
 
-import { ApartmentOutlined, SearchOutlined } from "@ant-design/icons-vue";
+import { SearchOutlined } from "@ant-design/icons-vue";
 
+import PanelCard from "../../components/PanelCard.vue";
 import type { XmlNode } from "../../tools/xml/xmlTypes";
 
 /**
@@ -136,37 +137,13 @@ function collectExpandableIds(nodes: XmlTreeNode[]): string[] {
 </script>
 
 <template>
-  <section
-    class="d-flex flex-column"
-    style="
-      height: 100%;
-      min-height: 0;
-      overflow: hidden;
-      border: 1px solid var(--app-border);
-      border-radius: 4px;
-      background-color: var(--app-surface);
-    "
-  >
-    <header
-      class="d-flex align-center text-body-2 font-weight-medium px-2 py-1"
-      style="
-        flex: 0 0 auto;
-        gap: 4px;
-        border-bottom: 1px solid var(--app-border);
-      "
-    >
-      <ApartmentOutlined
-        style="font-size: 14px; color: var(--app-text-muted)"
-      />
-      结构视图
-      <span style="flex: 1 1 auto" />
-
+  <PanelCard icon="ApartmentOutlined" title="结构视图">
+    <template #actions>
       <a-button size="small" type="text" @click.stop="toggleSearch">
         <template #icon>
           <SearchOutlined />
         </template>
       </a-button>
-
       <a-space :size="4">
         <a-button size="small" type="default" @click.stop="expandAll">
           展开
@@ -175,61 +152,63 @@ function collectExpandableIds(nodes: XmlTreeNode[]): string[] {
           折叠
         </a-button>
       </a-space>
-    </header>
+    </template>
 
-    <div
+    <a-input
       v-if="searchVisible"
-      class="px-2 py-1"
-      style="flex: 0 0 auto; border-bottom: 1px solid var(--app-border)"
+      ref="searchField"
+      v-model:value="searchQuery"
+      allow-clear
+      placeholder="搜索标签、属性或值"
+      size="small"
+      style="margin-bottom: 8px"
+    />
+
+    <a-empty
+      v-if="treeItems.length === 0"
+      description="粘贴合法 XML 后，结构视图会自动生成并默认展开。"
+      :image="undefined"
     >
-      <a-input
-        ref="searchField"
-        v-model:value="searchQuery"
-        allow-clear
-        placeholder="搜索标签、属性或值"
-        size="small"
-      />
-    </div>
+      <template #image>
+        <span />
+      </template>
+    </a-empty>
 
-    <div class="pa-2" style="flex: 1; min-height: 0; overflow: auto">
-      <a-empty
-        v-if="treeItems.length === 0"
-        description="粘贴合法 XML 后，结构视图会自动生成并默认展开。"
-        :image="undefined"
-      >
-        <template #image>
-          <span />
-        </template>
-      </a-empty>
-
-      <a-tree
-        v-else
-        v-model:expanded-keys="expandedKeys"
-        :tree-data="treeItems"
-        :field-names="{ key: 'id', title: 'label', children: 'children' }"
-        :block-node="true"
-        :selectable="false"
-        :virtual="false"
-      >
-        <template #title="{ label, type, value, attrs }">
-          <span class="text-body-2 font-weight-medium">{{ label }}</span>
-          <a-tag class="ml-1" size="small">{{ type }}</a-tag>
-          <span
-            v-if="attrs"
-            class="ml-1 text-caption"
-            style="color: var(--app-text-muted)"
-          >
-            {{ attrs }}
-          </span>
-          <span
-            v-if="value"
-            class="ml-1 text-caption"
-            style="color: var(--app-text-muted); word-break: break-all"
-          >
-            {{ value }}
-          </span>
-        </template>
-      </a-tree>
-    </div>
-  </section>
+    <a-tree
+      v-else
+      v-model:expanded-keys="expandedKeys"
+      :tree-data="treeItems"
+      :field-names="{ key: 'id', title: 'label', children: 'children' }"
+      :block-node="true"
+      :selectable="false"
+      :virtual="false"
+      style="overflow: auto; flex: 1"
+    >
+      <template #title="{ label, type, value, attrs }">
+        <span style="font-weight: 500">{{ label }}</span>
+        <a-tag style="margin-left: 4px" size="small">{{ type }}</a-tag>
+        <span
+          v-if="attrs"
+          style="
+            margin-left: 4px;
+            color: var(--app-text-muted);
+            font-size: 12px;
+          "
+        >
+          {{ attrs }}
+        </span>
+        <span
+          v-if="value"
+          style="
+            margin-left: 4px;
+            color: var(--app-text-muted);
+            font-size: 12px;
+            word-break: break-all;
+          "
+        >
+          {{ value }}
+        </span>
+      </template>
+    </a-tree>
+  </PanelCard>
 </template>

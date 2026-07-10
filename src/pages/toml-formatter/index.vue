@@ -18,7 +18,6 @@ import {
   minifyToml,
   validateToml,
 } from "../../tools/toml/tomlFormatter";
-import { PANEL_KEYS } from "../../utils/storage";
 
 const input = ref("");
 
@@ -34,8 +33,6 @@ const parsedDocument = computed<unknown | undefined>(() => {
   const result = formatToml(input.value);
   return result.success ? result.value : undefined;
 });
-
-const hasInput = computed(() => input.value.trim().length > 0);
 
 function handleFormat() {
   const result = formatToml(input.value);
@@ -58,7 +55,6 @@ function handleMinify() {
 }
 
 async function handleCopy() {
-  if (!hasInput.value) return;
   await navigator.clipboard.writeText(input.value);
   showInfo("TOML 已复制");
 }
@@ -70,98 +66,86 @@ function handleClear() {
 </script>
 
 <template>
-  <div
-    class="d-flex flex-column ga-2 h-100"
-    style="min-height: 0; overflow: hidden"
+  <a-flex
+    vertical
+    gap="small"
+    style="height: 100%; padding: 8px; box-sizing: border-box"
   >
-    <header
-      class="d-flex align-center ga-1 px-2 py-1"
-      style="
-        flex: 0 0 auto;
-        gap: 4px;
-        border: 1px solid var(--app-border);
-        border-radius: 4px;
-        background-color: var(--app-surface);
-      "
-    >
-      <span class="text-body-2 font-weight-medium">TOML 格式化</span>
+    <a-card size="small" :body-style="{ padding: '4px 12px' }">
+      <a-flex align="center" gap="small" wrap>
+        <span class="ant-typography">TOML 格式化</span>
 
-      <a-tag
-        :color="
-          validation.valid ? 'green' : validation.empty ? 'default' : 'red'
-        "
-        size="small"
-      >
-        {{ validation.valid ? "合法" : validation.empty ? "等待输入" : "错误" }}
-      </a-tag>
+        <a-tag
+          :color="
+            validation.valid ? 'green' : validation.empty ? 'default' : 'red'
+          "
+          size="small"
+        >
+          {{
+            validation.valid ? "合法" : validation.empty ? "等待输入" : "错误"
+          }}
+        </a-tag>
 
-      <a-tag color="cyan" size="small">{{ stats.bytes }} B</a-tag>
+        <a-tag color="cyan" size="small">{{ stats.bytes }} B</a-tag>
 
-      <a-tag color="cyan" size="small">{{ stats.lines }} 行</a-tag>
+        <a-tag color="cyan" size="small">{{ stats.lines }} 行</a-tag>
 
-      <span style="flex: 1 1 auto" />
+        <div style="flex: 1 1 auto" />
 
-      <a-button
-        :disabled="!hasInput"
-        size="small"
-        type="primary"
-        ghost
-        @click="handleFormat"
-      >
-        <template #icon>
-          <CheckCircleOutlined />
-        </template>
-        格式化
-      </a-button>
+        <a-button
+          size="small"
+          type="primary"
+          @click="handleFormat"
+        >
+          <template #icon>
+            <CheckCircleOutlined />
+          </template>
+          格式化
+        </a-button>
 
-      <a-button
-        :disabled="!hasInput"
-        size="small"
-        type="default"
-        ghost
-        @click="handleMinify"
-      >
-        <template #icon>
-          <CompressOutlined />
-        </template>
-        压缩
-      </a-button>
+        <a-button
+          size="small"
+          type="default"
+          @click="handleMinify"
+        >
+          <template #icon>
+            <CompressOutlined />
+          </template>
+          压缩
+        </a-button>
 
-      <a-button
-        :disabled="!hasInput"
-        size="small"
-        type="primary"
-        ghost
-        @click="handleCopy"
-      >
-        <template #icon>
-          <CopyOutlined />
-        </template>
-        复制
-      </a-button>
+        <a-button
+          size="small"
+          type="primary"
+          @click="handleCopy"
+        >
+          <template #icon>
+            <CopyOutlined />
+          </template>
+          复制
+        </a-button>
 
-      <a-button
-        :disabled="!hasInput"
-        size="small"
-        type="default"
-        ghost
-        @click="handleClear"
-      >
-        <template #icon>
-          <DeleteOutlined />
-        </template>
-        清空
-      </a-button>
-    </header>
+        <a-button
+          size="small"
+          type="default"
+          @click="handleClear"
+        >
+          <template #icon>
+            <DeleteOutlined />
+          </template>
+          清空
+        </a-button>
+      </a-flex>
+    </a-card>
 
-    <SplitPanel :panel-key="PANEL_KEYS.tomlFormatter">
-      <template #left>
+    <SplitPanel style="flex: 1 1 auto">
+      <template #top>
         <InputPanel v-model="input" />
       </template>
 
-      <template #right>
+      <template #bottom>
         <TomlTreePanel :value="parsedDocument" />
       </template>
     </SplitPanel>
-  </div>
+  </a-flex>
 </template>

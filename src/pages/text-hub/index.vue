@@ -40,11 +40,7 @@ const escapeModeMeta = computed(
   () => ESCAPE_MODES.find((m) => m.id === escapeMode.value) ?? ESCAPE_MODES[0],
 );
 
-const hasEscapeInput = computed(() => escapeInput.value.trim().length > 0);
-const hasEscapeOutput = computed(() => escapeOutput.value.length > 0);
-
 function handleEscapeEncode() {
-  if (!hasEscapeInput.value) return;
   try {
     escapeOutput.value = encodeByMode(escapeInput.value, escapeMode.value);
     showSuccess(`${escapeModeMeta.value.label} 已编码`);
@@ -54,7 +50,6 @@ function handleEscapeEncode() {
 }
 
 function handleEscapeDecode() {
-  if (!hasEscapeInput.value) return;
   try {
     escapeOutput.value = decodeByMode(escapeInput.value, escapeMode.value);
     showSuccess(`${escapeModeMeta.value.label} 已解码`);
@@ -64,14 +59,12 @@ function handleEscapeDecode() {
 }
 
 function handleEscapeSwap() {
-  if (!hasEscapeOutput.value) return;
   escapeInput.value = escapeOutput.value;
   escapeOutput.value = "";
   showSuccess("已交换输入和输出");
 }
 
 async function handleEscapeCopy() {
-  if (!hasEscapeOutput.value) return;
   await navigator.clipboard.writeText(escapeOutput.value);
   showInfo("输出已复制");
 }
@@ -93,16 +86,12 @@ const caseOutput = computed(() =>
     : "",
 );
 
-const hasCaseOutput = computed(() => caseOutput.value.length > 0);
-
 async function handleCaseCopy() {
-  if (!hasCaseOutput.value) return;
   await navigator.clipboard.writeText(caseOutput.value);
   showInfo("输出已复制");
 }
 
 function handleCaseSwap() {
-  if (!hasCaseOutput.value) return;
   caseInput.value = caseOutput.value;
 }
 
@@ -130,8 +119,6 @@ const lineResult = computed(() =>
 
 const lineOutput = computed(() => lineResult.value.lines.join("\n"));
 
-const hasLineOutput = computed(() => lineOutput.value.length > 0);
-
 const sortOptions = [
   { value: "none", label: "不排序" },
   { value: "asc", label: "升序" },
@@ -139,13 +126,11 @@ const sortOptions = [
 ];
 
 async function handleLineCopy() {
-  if (!hasLineOutput.value) return;
   await navigator.clipboard.writeText(lineOutput.value);
   showInfo("输出已复制");
 }
 
 function handleLineSwap() {
-  if (!hasLineOutput.value) return;
   lineInput.value = lineOutput.value;
 }
 
@@ -207,13 +192,14 @@ const textareaFillStyle = { flex: "1 1 auto", minHeight: 0 };
     整页根容器：纵向堆叠 4 个功能节，节之间 ga-2 间距。
     inline style 控制 padding / overflow（必须 inline）。
   -->
-  <div
-    class="d-flex flex-column ga-2"
+  <a-flex
+    vertical
+    :gap="8"
     style="height: 100%; padding: 8px; overflow: auto; box-sizing: border-box"
   >
     <!-- ── 转义 ──────────────────────────────────── -->
     <a-card size="small" :body-style="sectionBodyShort">
-      <div class="d-flex align-center" style="gap: 4px; flex-wrap: wrap">
+      <a-flex align="center" :gap="4" wrap>
         <a-typography-text strong>转义工具</a-typography-text>
 
         <a-radio-group
@@ -232,55 +218,45 @@ const textareaFillStyle = { flex: "1 1 auto", minHeight: 0 };
         <span style="flex: 1 1 auto" />
 
         <a-button
-          :disabled="!hasEscapeInput"
           size="small"
           type="primary"
-          ghost
           @click="handleEscapeEncode"
         >
           编码
         </a-button>
 
         <a-button
-          :disabled="!hasEscapeInput"
           size="small"
           type="default"
-          ghost
           @click="handleEscapeDecode"
         >
           解码
         </a-button>
 
         <a-button
-          :disabled="!hasEscapeOutput"
           size="small"
           type="dashed"
-          ghost
           @click="handleEscapeSwap"
         >
           交换
         </a-button>
 
         <a-button
-          :disabled="!hasEscapeOutput"
           size="small"
           type="primary"
-          ghost
           @click="handleEscapeCopy"
         >
           复制输出
         </a-button>
 
         <a-button
-          :disabled="!hasEscapeInput && !hasEscapeOutput"
           size="small"
           type="default"
-          ghost
           @click="handleEscapeClear"
         >
           清空
         </a-button>
-      </div>
+      </a-flex>
 
       <a-typography-text
         type="secondary"
@@ -318,7 +294,7 @@ const textareaFillStyle = { flex: "1 1 auto", minHeight: 0 };
 
     <!-- ── 大小写 ────────────────────────────────── -->
     <a-card size="small" :body-style="sectionBodyShort">
-      <div class="d-flex align-center" style="gap: 4px; flex-wrap: wrap">
+      <a-flex align="center" :gap="4" wrap>
         <a-typography-text strong>大小写转换</a-typography-text>
 
         <a-radio-group
@@ -339,35 +315,29 @@ const textareaFillStyle = { flex: "1 1 auto", minHeight: 0 };
         <span style="flex: 1 1 auto" />
 
         <a-button
-          :disabled="!hasCaseOutput"
           size="small"
           type="primary"
-          ghost
           @click="handleCaseCopy"
         >
           复制输出
         </a-button>
 
         <a-button
-          :disabled="!hasCaseOutput"
           size="small"
           type="dashed"
-          ghost
           @click="handleCaseSwap"
         >
           交换
         </a-button>
 
         <a-button
-          :disabled="!caseInput"
           size="small"
           type="default"
-          ghost
           @click="handleCaseClear"
         >
           清空
         </a-button>
-      </div>
+      </a-flex>
 
       <div :style="sectionBodyRow">
         <div :style="paneColInput">
@@ -398,7 +368,7 @@ const textareaFillStyle = { flex: "1 1 auto", minHeight: 0 };
 
     <!-- ── 行处理 ────────────────────────────────── -->
     <a-card size="small" :body-style="sectionBodyTall">
-      <div class="d-flex align-center" style="gap: 4px; flex-wrap: wrap">
+      <a-flex align="center" :gap="4" wrap>
         <a-typography-text strong>行处理</a-typography-text>
 
         <a-checkbox v-model:checked="lineTrim">trim</a-checkbox>
@@ -419,35 +389,29 @@ const textareaFillStyle = { flex: "1 1 auto", minHeight: 0 };
         <span style="flex: 1 1 auto" />
 
         <a-button
-          :disabled="!hasLineOutput"
           size="small"
           type="primary"
-          ghost
           @click="handleLineCopy"
         >
           复制输出
         </a-button>
 
         <a-button
-          :disabled="!hasLineOutput"
           size="small"
           type="dashed"
-          ghost
           @click="handleLineSwap"
         >
           交换
         </a-button>
 
         <a-button
-          :disabled="!lineInput"
           size="small"
           type="default"
-          ghost
           @click="handleLineClear"
         >
           清空
         </a-button>
-      </div>
+      </a-flex>
 
       <div :style="sectionBodyRow">
         <div :style="paneColInput">
@@ -475,5 +439,5 @@ const textareaFillStyle = { flex: "1 1 auto", minHeight: 0 };
         </div>
       </div>
     </a-card>
-  </div>
+  </a-flex>
 </template>

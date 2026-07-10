@@ -1,68 +1,56 @@
 <script setup lang="ts">
 import { computed, onBeforeUnmount, ref } from "vue";
 
-import { load, SETTINGS, save } from "../utils/storage";
-
 /**
- * 左右分栏容器组件。
+ * 上下分栏容器组件。
  *
- * 传入 panelKey 启用可拖拽并持久化到 localStorage；不传则固定 50/50。
- * 默认百分比优先取自 utils/storage 的 SETTINGS 元数据，保证设置页与组件
- * 第一次打开时的初始宽度一致；找不到回落到 50。
+ * 输入在上、输出在下，中间是 8px 可拖拽分隔条，鼠标拖动或键盘 ↑/↓ 调整比例。
+ * 不持久化占比，每次打开固定 50/50（避免给用户「我上次调好了怎么没了」的错觉，
+ * 桌面工具窗口一般也不需要记忆每个工具的尺寸）。
  */
 const FALLBACK_PERCENT = 50;
-
-function lookupDefault(key: string): number {
-  const meta = SETTINGS.find((s) => s.key === key);
-  return typeof meta?.defaultValue === "number"
-    ? meta.defaultValue
-    : FALLBACK_PERCENT;
-}
+const MIN_PERCENT = 15;
+const MAX_PERCENT = 85;
+const STEP_PERCENT = 5;
 
 const props = withDefaults(
   defineProps<{
-    /** localStorage 键名；不传则固定 50/50 不可拖拽 */
-    panelKey?: string | null;
-    /** 无存储键时，或 SETTINGS 未登记时的左侧面板百分比，默认 50 */
+    /** 初始上方面板占比（15-85），默认 50 */
     defaultPercent?: number;
   }>(),
-  { panelKey: null, defaultPercent: FALLBACK_PERCENT },
+  { defaultPercent: FALLBACK_PERCENT },
 );
 
-const resizable = computed(() => props.panelKey !== null);
-const leftPercent = ref(readPercent());
+const topPercent = ref(clampPercent(props.defaultPercent));
 const isResizing = ref(false);
 const workspaceRef = ref<HTMLElement | null>(null);
 
 const workspaceStyle = computed(() => ({
-  flex: "1 1 auto",
+  height: "100%",
+  display: "flex",
+  flexDirection: "column" as const,
+  gap: "8px",
   minHeight: 0,
   overflow: "hidden",
   userSelect: isResizing.value ? ("none" as const) : undefined,
 }));
 
-const leftStyle = computed(() =>
-  resizable.value ? { flexBasis: `${leftPercent.value}%` } : { flex: 1 },
-);
+const topStyle = computed(() => ({
+  flex: `0 0 ${topPercent.value}%`,
+  minHeight: 0,
+  minWidth: 0,
+  overflow: "hidden",
+}));
 
-const rightStyle = computed(() =>
-  resizable.value ? { flexBasis: `${100 - leftPercent.value}%` } : { flex: 1 },
-);
-
-function readPercent(): number {
-  if (!props.panelKey) return props.defaultPercent;
-  // 优先读取存储；未持久化时使用 SETTINGS 元数据的默认值，保证与设置页一致。
-  return clampPercent(
-    load<number>(props.panelKey, lookupDefault(props.panelKey)),
-  );
-}
-
-function savePercent(): void {
-  if (props.panelKey) save(props.panelKey, leftPercent.value);
-}
+const bottomStyle = computed(() => ({
+  flex: `1 1 ${MAX_PERCENT - topPercent.value}%`,
+  minHeight: 0,
+  minWidth: 0,
+  overflow: "hidden",
+}));
 
 function clampPercent(value: number): number {
-  return Math.min(85, Math.max(15, value));
+  return Math.min(MAX_PERCENT, Math.max(MIN_PERCENT, value));
 }
 
 function startResize(event: PointerEvent) {
@@ -74,63 +62,60 @@ function startResize(event: PointerEvent) {
 
 function handleResize(event: PointerEvent) {
   const bounds = workspaceRef.value?.getBoundingClientRect();
-  if (!bounds) return;
-  leftPercent.value = clampPercent(
-    ((event.clientX - bounds.left) / bounds.width) * 100,
+  if (!bounds || bounds.height === 0) return;
+  topPercent.value = clampPercent(
+    ((event.clientY - bounds.top) / bounds.height) * 100,
   );
 }
 
 function stopResize() {
   isResizing.value = false;
-  savePercent();
   window.removeEventListener("pointermove", handleResize);
   window.removeEventListener("pointerup", stopResize);
 }
 
 function resizeBy(delta: number) {
-  leftPercent.value = clampPercent(leftPercent.value + delta);
-  savePercent();
+  topPercent.value = clampPercent(topPercent.value + delta);
 }
 
 onBeforeUnmount(stopResize);
 </script>
 
 <template>
-  <div ref="workspaceRef" class="d-flex ga-2" :style="workspaceStyle">
-    <section style="min-width: 0; min-height: 0" :style="leftStyle">
-      <slot name="left" />
+  <div ref="workspaceRef" :style="workspaceStyle">
+    <section :style="topStyle">
+      <slot name="top" />
     </section>
 
-    <!-- 分隔条：仅在 resizable 时渲染 -->
     <div
-      v-if="resizable"
-      aria-label="调整左右面板宽度"
+      aria-label="调整上下面板高度"
+      aria-orientation="horizontal"
       role="separator"
       tabindex="0"
       class="split-handle"
-      @keydown.left.prevent="resizeBy(-5)"
-      @keydown.right.prevent="resizeBy(5)"
+      @keydown.up.prevent="resizeBy(STEP_PERCENT)"
+      @keydown.down.prevent="resizeBy(-STEP_PERCENT)"
       @pointerdown.prevent="startResize"
     />
 
-    <section style="min-width: 0; min-height: 0" :style="rightStyle">
-      <slot name="right" />
+    <section :style="bottomStyle">
+      <slot name="bottom" />
     </section>
   </div>
 </template>
 
 <style scoped>
 .split-handle {
-  width: 8px;
   flex: 0 0 8px;
-  cursor: col-resize;
-  border-radius: 4px;
+  height: 8px;
   align-self: stretch;
+  cursor: row-resize;
+  border-radius: 4px;
   background-color: transparent;
   transition: background-color 120ms ease;
 }
 .split-handle:hover,
-.split-handle:focus {
+.split-handle:focus-visible {
   background-color: var(--app-border);
   outline: none;
 }

@@ -6,7 +6,7 @@
  * - 左：输入文本 + 生成配置，实时生成二维码并提供下载。
  * - 右：上传 / 拖拽 / 从剪贴板读取图片，解码出原始内容。
  *
- * 两个功能互相独立，状态条各自显示，宽度可拖拽并持久化。
+ * 两个功能互相独立，状态条各自显示。
  */
 import { computed, onBeforeUnmount, ref, watch } from "vue";
 
@@ -19,7 +19,6 @@ import {
 } from "@ant-design/icons-vue";
 
 import PanelCard from "../../components/PanelCard.vue";
-import SplitPanel from "../../components/SplitPanel.vue";
 import { showError, showInfo, showSuccess } from "../../composables/useMessage";
 import {
   copyText,
@@ -34,7 +33,6 @@ import {
   decodeQrFromClipboard,
   decodeQrFromFile,
 } from "../../tools/qrcode/qrcodeDecoder";
-import { PANEL_KEYS } from "../../utils/storage";
 
 /** 默认生成配置。 */
 const DEFAULTS = {
@@ -45,7 +43,7 @@ const DEFAULTS = {
   bgColor: "#FFFFFF",
 };
 
-// ── 左侧「生成」状态 ────────────────────────────────────
+// ── 上「生成」状态 ─────────────────────────────────────
 const input = ref("");
 const size = ref<number>(DEFAULTS.size);
 const margin = ref<number>(DEFAULTS.margin);
@@ -60,14 +58,14 @@ const generateError = ref<string | null>(null);
 let generateToken = 0;
 let generateTimer: ReturnType<typeof setTimeout> | null = null;
 
-// ── 右侧「识别」状态 ────────────────────────────────────
+// ── 下「识别」状态 ─────────────────────────────────────
 const imagePreviewURL = ref<string | null>(null);
 const decodedText = ref<string | null>(null);
 const decodeError = ref<string | null>(null);
 const isDecoding = ref(false);
 const isDragActive = ref(false);
 
-// ── 计算属性：左「生成」 ─────────────────────────────────
+// ── 计算属性：上「生成」 ─────────────────────────────────
 const inputValidation = computed(() => validateQrInput(input.value));
 const hasInput = computed(() => input.value.length > 0);
 const charCount = computed(() => input.value.length);
@@ -91,7 +89,7 @@ const generateStatusLabel = computed(() => {
   return "生成中…";
 });
 
-// ── 计算属性：右「识别」 ─────────────────────────────────
+// ── 计算属性：下「识别」 ─────────────────────────────────
 const hasDecodedText = computed(() => decodedText.value !== null);
 const hasPreviewImage = computed(() => imagePreviewURL.value !== null);
 
@@ -288,16 +286,6 @@ function handleDownloadSvg() {
   }
 }
 
-async function handleCopyDataURL() {
-  if (!generatedDataURL.value) return;
-  try {
-    await copyText(generatedDataURL.value);
-    showInfo("dataURL 已复制");
-  } catch {
-    showError("复制失败，请检查浏览器剪贴板权限");
-  }
-}
-
 async function handleCopyInput() {
   if (!hasInput.value) return;
   try {
@@ -322,17 +310,68 @@ async function handleCopyDecoded() {
 onBeforeUnmount(() => {
   if (imagePreviewURL.value) URL.revokeObjectURL(imagePreviewURL.value);
 });
+
+/* ── 共享样式（用对象 inline，避免 scoped CSS） ── */
+const colorInputStyle = {
+  width: "32px",
+  height: "24px",
+  padding: 0,
+  border: "1px solid var(--app-border)",
+  borderRadius: "4px",
+  background: "transparent",
+  cursor: "pointer",
+} as const;
+
+const previewWrapStyle = {
+  flex: "1 1 auto",
+  minHeight: "200px",
+  display: "flex",
+  alignItems: "center",
+  justifyContent: "center",
+  backgroundColor: "#ffffff",
+  border: "1px solid var(--app-border)",
+  borderRadius: "4px",
+  padding: "12px",
+  overflow: "hidden",
+} as const;
+
+const previewImgStyle = {
+  maxWidth: "100%",
+  maxHeight: "100%",
+  objectFit: "contain" as const,
+  imageRendering: "pixelated" as const,
+};
+
+const dropZoneBaseStyle = {
+  position: "relative" as const,
+  display: "flex",
+  flexDirection: "column" as const,
+  alignItems: "center",
+  justifyContent: "center",
+  flex: "0 0 auto",
+  minHeight: "140px",
+  border: "1px dashed var(--app-border)",
+  borderRadius: "4px",
+  cursor: "pointer",
+  transition: "border-color 120ms ease, background-color 120ms ease",
+};
+
+const fileInputStyle = {
+  position: "absolute" as const,
+  inset: 0,
+  width: "100%",
+  height: "100%",
+  opacity: 0,
+  cursor: "pointer",
+};
 </script>
 
 <template>
-  <div
-    class="d-flex flex-column ga-2 h-100"
-    style="min-height: 0; overflow: hidden"
-  >
-    <SplitPanel :panel-key="PANEL_KEYS.qrcodeTool">
+  <div style="height: 100%; padding: 8px; box-sizing: border-box">
+    <a-row :gutter="8" style="height: 100%; margin: 0">
       <!-- 左：生成 -->
-      <template #left>
-        <PanelCard icon="BarcodeOutlined" title="生成二维码">
+      <a-col :xs="24" :sm="24" :md="12" :lg="12" style="height: 100%">
+        <PanelCard icon="BarcodeOutlined" title="生成二维码" overflow="auto">
           <template #actions>
             <a-tag :color="generateStatusColor" size="small">
               {{ generateStatusLabel }}
@@ -340,7 +379,6 @@ onBeforeUnmount(() => {
             <a-button
               size="small"
               type="text"
-              :disabled="!hasInput"
               @click="handleClearGenerate"
             >
               <template #icon>
@@ -350,31 +388,31 @@ onBeforeUnmount(() => {
             </a-button>
           </template>
 
-          <div class="d-flex flex-column" style="height: 100%; gap: 8px">
+          <a-flex vertical :gap="8" style="height: 100%">
             <textarea
               v-model="input"
               class="app-textarea"
               placeholder="输入任意文本（URL、JSON、联系方式…）"
               style="flex: 0 0 auto; min-height: 72px; max-height: 120px"
             />
-            <div class="text-caption" style="color: var(--app-text-muted)">
+            <a-typography-text type="secondary" style="font-size: 12px">
               {{ charCount }} 字符
-            </div>
+            </a-typography-text>
 
             <!-- 居中预览：二维码主体展示区 -->
-            <div class="qrcode-preview-wrap">
-              <div
+            <div :style="previewWrapStyle">
+              <a-typography-text
                 v-if="generateError"
-                class="qrcode-preview-empty"
-                style="color: #d4380d"
+                type="danger"
+                style="text-align: center; font-size: 12px"
               >
                 生成失败：{{ generateError }}
-              </div>
+              </a-typography-text>
               <a-empty
                 v-else-if="!hasGeneratedImage"
                 :image="undefined"
                 description="在上方输入内容，二维码会实时显示"
-                class="qrcode-preview-empty"
+                style="font-size: 12px"
               >
                 <template #image>
                   <span />
@@ -386,21 +424,20 @@ onBeforeUnmount(() => {
                 alt="二维码"
                 :width="size"
                 :height="size"
-                class="qrcode-preview-img"
+                :style="previewImgStyle"
               />
             </div>
 
-            <div
-              class="d-flex flex-column"
-              style="
-                border-top: 1px solid var(--app-border);
-                padding-top: 8px;
-                gap: 8px;
-              "
+            <a-flex
+              vertical
+              :gap="8"
+              style="border-top: 1px solid var(--app-border); padding-top: 8px"
             >
-              <div class="text-caption font-weight-medium">生成配置</div>
+              <a-typography-text strong style="font-size: 12px">
+                生成配置
+              </a-typography-text>
 
-              <div class="d-flex align-center" style="gap: 8px">
+              <a-flex align="center" :gap="8">
                 <span style="width: 56px; font-size: 12px">尺寸</span>
                 <a-slider
                   v-model:value="size"
@@ -410,18 +447,18 @@ onBeforeUnmount(() => {
                   style="flex: 1"
                 />
                 <span
-                  class="text-caption"
                   style="
                     width: 48px;
                     text-align: right;
+                    font-size: 12px;
                     color: var(--app-text-muted);
                   "
                 >
                   {{ size }}px
                 </span>
-              </div>
+              </a-flex>
 
-              <div class="d-flex align-center" style="gap: 8px">
+              <a-flex align="center" :gap="8">
                 <span style="width: 56px; font-size: 12px">容错</span>
                 <a-radio-group
                   v-model:value="errorLevel"
@@ -434,9 +471,9 @@ onBeforeUnmount(() => {
                   <a-radio-button value="Q">Q · 25%</a-radio-button>
                   <a-radio-button value="H">H · 30%</a-radio-button>
                 </a-radio-group>
-              </div>
+              </a-flex>
 
-              <div class="d-flex align-center" style="gap: 8px">
+              <a-flex align="center" :gap="8">
                 <span style="width: 56px; font-size: 12px">边距</span>
                 <a-slider
                   v-model:value="margin"
@@ -446,67 +483,62 @@ onBeforeUnmount(() => {
                   style="flex: 1"
                 />
                 <span
-                  class="text-caption"
                   style="
                     width: 48px;
                     text-align: right;
+                    font-size: 12px;
                     color: var(--app-text-muted);
                   "
                 >
                   {{ margin }}
                 </span>
-              </div>
+              </a-flex>
 
-              <div class="d-flex align-center" style="gap: 12px">
+              <a-flex align="center" :gap="12">
                 <span style="width: 56px; font-size: 12px">前景色</span>
                 <input
                   v-model="fgColor"
                   type="color"
-                  class="qrcode-color-input"
+                  :style="colorInputStyle"
                 />
                 <span
-                  class="text-caption"
                   style="
                     color: var(--app-text-muted);
                     font-family: ui-monospace, monospace;
+                    font-size: 12px;
                   "
                 >
                   {{ fgColor }}
                 </span>
-                <span style="flex: 1" />
+                <div style="flex: 1" />
                 <span style="width: 56px; font-size: 12px">背景色</span>
                 <input
                   v-model="bgColor"
                   type="color"
-                  class="qrcode-color-input"
+                  :style="colorInputStyle"
                 />
                 <span
-                  class="text-caption"
                   style="
                     color: var(--app-text-muted);
                     font-family: ui-monospace, monospace;
+                    font-size: 12px;
                   "
                 >
                   {{ bgColor }}
                 </span>
-              </div>
-            </div>
+              </a-flex>
+            </a-flex>
 
             <!-- 操作行 -->
-            <div
-              class="d-flex align-center"
-              style="
-                gap: 8px;
-                border-top: 1px solid var(--app-border);
-                padding-top: 8px;
-                flex-wrap: wrap;
-              "
+            <a-flex
+              align="center"
+              :gap="8"
+              wrap
+              style="border-top: 1px solid var(--app-border); padding-top: 8px"
             >
               <a-button
                 size="small"
                 type="primary"
-                ghost
-                :disabled="!hasInput"
                 @click="handleCopyInput"
               >
                 <template #icon>
@@ -517,8 +549,6 @@ onBeforeUnmount(() => {
               <a-button
                 size="small"
                 type="primary"
-                ghost
-                :disabled="!hasGeneratedImage"
                 @click="handleDownloadPng"
               >
                 <template #icon>
@@ -529,8 +559,6 @@ onBeforeUnmount(() => {
               <a-button
                 size="small"
                 type="primary"
-                ghost
-                :disabled="!hasGeneratedImage"
                 @click="handleDownloadSvg"
               >
                 <template #icon>
@@ -538,26 +566,14 @@ onBeforeUnmount(() => {
                 </template>
                 下载 SVG
               </a-button>
-              <a-button
-                size="small"
-                type="default"
-                ghost
-                :disabled="!hasGeneratedImage"
-                @click="handleCopyDataURL"
-              >
-                <template #icon>
-                  <CopyOutlined />
-                </template>
-                复制 dataURL
-              </a-button>
-            </div>
-          </div>
+            </a-flex>
+          </a-flex>
         </PanelCard>
-      </template>
+      </a-col>
 
       <!-- 右：识别 -->
-      <template #right>
-        <PanelCard icon="ScanOutlined" title="识别二维码">
+      <a-col :xs="24" :sm="24" :md="12" :lg="12" style="height: 100%">
+        <PanelCard icon="ScanOutlined" title="识别二维码" overflow="auto">
           <template #actions>
             <a-tag :color="decodeStatusColor" size="small">
               {{ decodeStatusLabel }}
@@ -565,7 +581,6 @@ onBeforeUnmount(() => {
             <a-button
               size="small"
               type="text"
-              :disabled="!hasPreviewImage && !hasDecodedText && !decodeError"
               @click="handleClearDecode"
             >
               <template #icon>
@@ -575,11 +590,10 @@ onBeforeUnmount(() => {
             </a-button>
           </template>
 
-          <div class="d-flex flex-column" style="height: 100%; gap: 8px">
+          <a-flex vertical :gap="8" style="height: 100%">
             <!-- 拖拽区 + 选择文件 -->
             <label
-              class="qrcode-dropzone"
-              :style="dropZoneStyle"
+              :style="{ ...dropZoneBaseStyle, ...dropZoneStyle }"
               @dragenter.prevent="onDragEnter"
               @dragover.prevent="onDragOver"
               @dragleave.prevent="onDragLeave"
@@ -588,21 +602,21 @@ onBeforeUnmount(() => {
               <input
                 type="file"
                 accept="image/*"
-                class="qrcode-file-input"
+                :style="fileInputStyle"
                 @change="onFileInputChange"
               />
               <CloudUploadOutlined
                 style="font-size: 28px; color: var(--app-text-muted)"
               />
-              <div
-                class="text-body-2"
-                style="margin-top: 6px; color: var(--app-text)"
-              >
+              <div style="margin-top: 6px; color: var(--app-text)">
                 点击选择 或 拖拽图片到此处
               </div>
               <div
-                class="text-caption"
-                style="margin-top: 2px; color: var(--app-text-muted)"
+                style="
+                  margin-top: 2px;
+                  color: var(--app-text-muted);
+                  font-size: 12px;
+                "
               >
                 支持 PNG / JPG / WebP / BMP，单张最大 10MB
               </div>
@@ -611,7 +625,6 @@ onBeforeUnmount(() => {
             <a-button
               size="small"
               type="primary"
-              ghost
               :loading="isDecoding"
               @click="onPickFromClipboard"
             >
@@ -622,9 +635,10 @@ onBeforeUnmount(() => {
             </a-button>
 
             <!-- 图片预览 -->
-            <div
+            <a-flex
               v-if="imagePreviewURL"
-              class="d-flex align-center justify-center"
+              align="center"
+              justify="center"
               style="
                 flex: 0 0 auto;
                 max-height: 200px;
@@ -640,7 +654,7 @@ onBeforeUnmount(() => {
                 alt="待识别图片"
                 style="max-width: 100%; max-height: 184px; object-fit: contain"
               />
-            </div>
+            </a-flex>
 
             <!-- 解码结果 -->
             <textarea
@@ -650,24 +664,23 @@ onBeforeUnmount(() => {
               placeholder="解码结果会显示在这里"
               style="flex: 1; min-height: 80px"
             />
-            <div v-if="decodeError" class="text-caption" style="color: #d4380d">
+            <a-typography-text
+              v-if="decodeError"
+              type="danger"
+              style="font-size: 12px"
+            >
               {{ decodeError }}
-            </div>
+            </a-typography-text>
 
             <!-- 操作行 -->
-            <div
-              class="d-flex align-center"
-              style="
-                gap: 8px;
-                border-top: 1px solid var(--app-border);
-                padding-top: 8px;
-              "
+            <a-flex
+              align="center"
+              :gap="8"
+              style="border-top: 1px solid var(--app-border); padding-top: 8px"
             >
               <a-button
                 size="small"
                 type="primary"
-                ghost
-                :disabled="!hasDecodedText"
                 @click="handleCopyDecoded"
               >
                 <template #icon>
@@ -675,93 +688,17 @@ onBeforeUnmount(() => {
                 </template>
                 复制结果
               </a-button>
-              <span
+              <a-typography-text
                 v-if="hasDecodedText"
-                class="text-caption"
-                style="color: var(--app-text-muted)"
+                type="secondary"
+                style="font-size: 12px"
               >
                 （{{ decodedText!.length }} 字符）
-              </span>
-            </div>
-          </div>
+              </a-typography-text>
+            </a-flex>
+          </a-flex>
         </PanelCard>
-      </template>
-    </SplitPanel>
+      </a-col>
+    </a-row>
   </div>
 </template>
-
-<style scoped>
-/* 颜色选择器：缩小原生 input 的大小，跟 ant 控件风格一致 */
-.qrcode-color-input {
-  width: 32px;
-  height: 24px;
-  padding: 0;
-  border: 1px solid var(--app-border);
-  border-radius: 4px;
-  background: transparent;
-  cursor: pointer;
-}
-.qrcode-color-input::-webkit-color-swatch-wrapper {
-  padding: 0;
-}
-.qrcode-color-input::-webkit-color-swatch {
-  border: none;
-  border-radius: 3px;
-}
-
-/* 拖拽上传区：用 label + hidden input 实现"点击也选文件" */
-.qrcode-dropzone {
-  position: relative;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  flex: 0 0 auto;
-  min-height: 140px;
-  border: 1px dashed var(--app-border);
-  border-radius: 4px;
-  cursor: pointer;
-  transition:
-    border-color 120ms ease,
-    background-color 120ms ease;
-}
-.qrcode-dropzone:hover {
-  border-color: #000000;
-}
-.qrcode-file-input {
-  position: absolute;
-  inset: 0;
-  width: 100%;
-  height: 100%;
-  opacity: 0;
-  cursor: pointer;
-}
-
-/* 二维码预览区：占据左 PanelCard 主要视觉空间
-   - 自适应列宽（max-width: 100%）
-   - 固定 320px 高度避免过大撑爆布局
-   - 白色背景（无论主题）确保二维码在深色下也清晰可见 */
-.qrcode-preview-wrap {
-  flex: 1 1 auto;
-  min-height: 200px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background-color: #ffffff;
-  border: 1px solid var(--app-border);
-  border-radius: 4px;
-  padding: 12px;
-  overflow: hidden;
-}
-.qrcode-preview-img {
-  max-width: 100%;
-  max-height: 100%;
-  object-fit: contain;
-  image-rendering: pixelated;
-}
-.qrcode-preview-empty {
-  text-align: center;
-  color: var(--app-text-muted);
-  font-size: 12px;
-}
-</style>

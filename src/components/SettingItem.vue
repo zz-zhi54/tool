@@ -37,20 +37,7 @@ const emit = defineEmits<{
 
     <!-- 控件 -->
     <div class="setting-item-control">
-      <template v-if="snap.control.type === 'slider'">
-        <a-slider
-          :value="snap.value as number"
-          :min="snap.control.min"
-          :max="snap.control.max"
-          :step="snap.control.step"
-          @update:value="
-            (v: number | number[]) =>
-              emit('change', snap, Array.isArray(v) ? v[0] : v)
-          "
-        />
-      </template>
-
-      <template v-else-if="snap.control.type === 'toggle'">
+      <template v-if="snap.control.type === 'toggle'">
         <a-radio-group
           :value="snap.value as string"
           option-type="button"

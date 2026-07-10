@@ -11,7 +11,7 @@
  */
 import { computed, ref, watch } from "vue";
 
-import { CopyOutlined, DeleteOutlined } from "@ant-design/icons-vue";
+import { CopyOutlined } from "@ant-design/icons-vue";
 
 import { showInfo } from "../../composables/useMessage";
 import { testRegex, validateRegex } from "../../tools/regex/regexTester";
@@ -74,7 +74,6 @@ const hasPattern = computed(() => pattern.value.trim().length > 0);
 /* ── 操作 ───────────────────────────────────────────── */
 
 async function handleCopyMatches() {
-  if (matchCount.value === 0) return;
   const text = result.value.matches
     .map(
       (m, i) =>
@@ -182,11 +181,7 @@ const toolbarStyle = {
 
         <a-tag
           :color="
-            validation.valid
-              ? 'green'
-              : validation.empty
-                ? 'default'
-                : 'red'
+            validation.valid ? 'green' : validation.empty ? 'default' : 'red'
           "
           size="small"
         >
@@ -206,8 +201,6 @@ const toolbarStyle = {
         <a-button
           size="small"
           type="primary"
-          ghost
-          :disabled="matchCount === 0"
           @click="handleCopyMatches"
         >
           <template #icon>
@@ -219,13 +212,8 @@ const toolbarStyle = {
         <a-button
           size="small"
           type="default"
-          ghost
-          :disabled="!hasPattern && !input"
           @click="handleClear"
         >
-          <template #icon>
-            <DeleteOutlined />
-          </template>
           清空
         </a-button>
       </div>
@@ -233,9 +221,7 @@ const toolbarStyle = {
 
     <!-- 语法错误提示 -->
     <a-alert
-      v-if="
-        !validation.valid && !validation.empty && validation.errorMessage
-      "
+      v-if="!validation.valid && !validation.empty && validation.errorMessage"
       type="error"
       :message="validation.errorMessage"
       show-icon
@@ -257,18 +243,14 @@ const toolbarStyle = {
 
     <!-- 匹配结果区：填满剩余空间 -->
     <div :style="resultSection">
-      <div class="d-flex align-center" style="gap: 6px">
+      <a-flex align="center" :gap="6">
         <a-typography-text type="secondary" style="font-size: 12px">
           匹配结果
         </a-typography-text>
-        <a-tag
-          v-if="result.matches.length > 0"
-          color="blue"
-          size="small"
-        >
+        <a-tag v-if="result.matches.length > 0" color="blue" size="small">
           共 {{ matchCount }} 个
         </a-tag>
-      </div>
+      </a-flex>
 
       <div v-if="result.matches.length > 0" :style="scrollListStyle">
         <a-card
@@ -278,14 +260,12 @@ const toolbarStyle = {
           :body-style="matchCardBody"
           :style="matchCardWidth"
         >
-          <div class="d-flex align-center" style="gap: 6px; margin-bottom: 6px">
+          <a-flex align="center" :gap="6" style="margin-bottom: 6px">
             <a-tag color="blue" size="small">#{{ idx + 1 }}</a-tag>
             <a-typography-text type="secondary">
-              位置 {{ match.index }}–{{
-                match.index + match.text.length - 1
-              }}
+              位置 {{ match.index }}–{{ match.index + match.text.length - 1 }}
             </a-typography-text>
-          </div>
+          </a-flex>
           <a-descriptions
             size="small"
             :column="1"

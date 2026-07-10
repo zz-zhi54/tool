@@ -82,6 +82,15 @@ export const tools: ToolDefinition[] = [
     accent: "#fa8c16",
   },
   {
+    id: "sql-generator",
+    title: "SQL 生成器",
+    description: "把多行数据快速拼装为 SQL IN 片段。",
+    category: "encoding",
+    icon: "DatabaseOutlined",
+    status: "available",
+    accent: "#9254de",
+  },
+  {
     id: "time-hub",
     title: "时间工具",
     description: "时间戳、时区与日期计算的统一入口。",

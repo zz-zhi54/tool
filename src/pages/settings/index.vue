@@ -13,8 +13,6 @@ import {
   SETTINGS,
 } from "../../utils/storage";
 import type {
-  RegexFlag,
-  RegexFlagsPreference,
   SqlQuoteStyle,
   SettingGroupMeta,
   SettingSnapshot,
@@ -27,79 +25,38 @@ const appVersion = packageInfo.version;
 const items = ref<SettingSnapshot[]>(getSettings());
 
 /**
- * 分组后的设置项：每个顶层分组下挂项或子分组。
- *
- * - 顶层分组：无 parent 的 SETTING_GROUPS 条目。
- * - 布局类（layout）：item 挂在子分组上（数据格式/编码/时间/文本），
- *   顶层组只作为容器和说明。
- * - 工具类（regexTester / sqlGenerator）：item 直接挂在顶层组上。
- * - 没有项目的子分组自动隐藏。
+ * 分组后的设置项：仅顶层分组（当前只有 sqlGenerator），
+ * 每个分组下平铺 SettingItem。
  */
 interface GroupedSetting {
   meta: SettingGroupMeta;
   items: SettingSnapshot[];
-  children: { meta: SettingGroupMeta; items: SettingSnapshot[] }[];
 }
 
 const grouped = computed<GroupedSetting[]>(() =>
-  SETTING_GROUPS.filter((g) => !g.parent)
-    .map((top) => {
-      const directItems = items.value.filter((item) => item.group === top.id);
-      const children = SETTING_GROUPS.filter((s) => s.parent === top.id)
-        .map((sub) => ({
-          meta: sub,
-          items: items.value.filter((item) => item.group === sub.id),
-        }))
-        .filter((sub) => sub.items.length > 0);
-      return { meta: top, items: directItems, children };
-    })
-    // 隐藏空组（既无直接项又无子分组）
-    .filter((g) => g.items.length > 0 || g.children.length > 0),
+  SETTING_GROUPS.map((meta) => ({
+    meta,
+    items: items.value.filter((item) => item.group === meta.id),
+  })).filter((g) => g.items.length > 0),
 );
 
 function refresh() {
   items.value = getSettings();
 }
 
-function getSnapshot(key: string): SettingSnapshot {
-  return items.value.find((item) => item.key === key)!;
-}
-
 // ── handlers ────────────────────────────────────────
-
-function onSlider(key: string, value: number) {
-  save(key, value);
-  refresh();
-}
 
 function onToggle(key: string, value: string | number) {
   save(key, String(value) as SqlQuoteStyle);
   refresh();
 }
 
-function onCheckbox(key: string, flag: string, checked: boolean) {
-  const snap = getSnapshot(key);
-  save(key, {
-    ...(snap.value as RegexFlagsPreference),
-    [flag as RegexFlag]: Boolean(checked),
-  });
-  refresh();
-}
-
 /**
  * SettingItem 的统一 change 事件入口。
- * - slider / toggle：args = [value]
- * - checkbox：       args = [flag, checked]
+ * - toggle：args = [value]
  */
 function onItemChange(snap: SettingSnapshot, ...args: unknown[]) {
-  if (snap.control.type === "checkboxes") {
-    const [flag, checked] = args;
-    onCheckbox(snap.key, String(flag), Boolean(checked));
-  } else if (snap.control.type === "toggle") {
-    onToggle(snap.key, args[0] as string | number);
-  } else {
-    onSlider(snap.key, Number(args[0]));
-  }
+  onToggle(snap.key, args[0] as string | number);
 }
 
 function resetItem(snap: SettingSnapshot) {
@@ -116,99 +73,54 @@ function resetAll() {
 </script>
 
 <template>
-  <div
-    class="d-flex flex-column ga-2 h-100"
-    style="min-height: 0; overflow: hidden"
+  <a-flex
+    vertical
+    gap="small"
+    style="height: 100%; padding: 8px; box-sizing: border-box"
   >
-    <header
-      class="d-flex align-center px-2 py-1"
-      style="
-        flex: 0 0 auto;
-        border: 1px solid var(--app-border);
-        border-radius: 4px;
-        background-color: var(--app-surface);
-        gap: 8px;
-      "
-    >
-      <span class="text-body-2 font-weight-medium">设置</span>
-      <span class="text-caption" style="color: var(--app-text-muted)">
-        v{{ appVersion }}
-      </span>
-      <span style="flex: 1 1 auto" />
-      <a-button size="small" type="default" ghost @click="resetAll">
-        <template #icon>
-          <ReloadOutlined />
-        </template>
-        重置全部
-      </a-button>
-    </header>
+    <a-card size="small" :body-style="{ padding: '4px 12px' }">
+      <a-flex align="center" gap="small">
+        <span class="ant-typography">设置</span>
+        <a-typography-text type="secondary" style="font-size: 12px">
+          v{{ appVersion }}
+        </a-typography-text>
+        <div style="flex: 1 1 auto" />
+        <a-button size="small" type="default" @click="resetAll">
+          <template #icon>
+            <ReloadOutlined />
+          </template>
+          重置全部
+        </a-button>
+      </a-flex>
+    </a-card>
 
-    <div
-      class="d-flex flex-column ga-3"
+    <a-flex
+      vertical
+      gap="middle"
       style="flex: 1 1 auto; min-height: 0; overflow: auto"
     >
-      <section
+      <a-card
         v-for="group in grouped"
         :key="group.meta.id"
-        style="
-          border: 1px solid var(--app-border);
-          border-radius: 4px;
-          background-color: var(--app-surface);
-        "
+        size="small"
+        :title="group.meta.title"
       >
-        <header
-          class="px-3 py-2"
-          style="border-bottom: 1px solid var(--app-border)"
-        >
-          <div class="text-body-2 font-weight-medium">
-            {{ group.meta.title }}
-          </div>
-          <div class="text-caption" style="color: var(--app-text-muted)">
+        <template #extra>
+          <a-typography-text type="secondary" style="font-size: 12px">
             {{ group.meta.description }}
-          </div>
-        </header>
+          </a-typography-text>
+        </template>
 
-        <div class="d-flex flex-column ga-3 px-3 py-3">
-          <!-- 直接挂在顶层下的项（regexTester / sqlGenerator 用） -->
-          <div v-if="group.items.length > 0" class="d-flex flex-column ga-2">
-            <SettingItem
-              v-for="snap in group.items"
-              :key="snap.key"
-              :snap="snap"
-              @change="onItemChange"
-              @reset="resetItem"
-            />
-          </div>
-
-          <!-- 子分组项（layout 类用：数据格式 / 编码 / 时间 / 文本） -->
-          <div
-            v-for="sub in group.children"
-            :key="sub.meta.id"
-            class="d-flex flex-column ga-2"
-          >
-            <div
-              class="text-body-2"
-              style="color: var(--app-text-muted); margin-top: 4px"
-            >
-              {{ sub.meta.title }}
-            </div>
-            <div
-              v-if="sub.meta.description"
-              class="text-caption"
-              style="color: var(--app-text-muted); margin-bottom: 4px"
-            >
-              {{ sub.meta.description }}
-            </div>
-            <SettingItem
-              v-for="snap in sub.items"
-              :key="snap.key"
-              :snap="snap"
-              @change="onItemChange"
-              @reset="resetItem"
-            />
-          </div>
-        </div>
-      </section>
-    </div>
-  </div>
+        <a-flex vertical gap="middle">
+          <SettingItem
+            v-for="snap in group.items"
+            :key="snap.key"
+            :snap="snap"
+            @change="onItemChange"
+            @reset="resetItem"
+          />
+        </a-flex>
+      </a-card>
+    </a-flex>
+  </a-flex>
 </template>
