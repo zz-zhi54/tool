@@ -43,6 +43,7 @@ import {
   ReloadOutlined,
   RightOutlined,
   SafetyOutlined,
+  ScanOutlined,
   SearchOutlined,
   SettingOutlined,
   SwapOutlined,
@@ -82,6 +83,7 @@ const REGISTRY: Record<string, Component> = {
   OrderedListOutlined,
   ProfileOutlined,
   SafetyOutlined,
+  ScanOutlined,
   SwapOutlined,
   TranslationOutlined,
 

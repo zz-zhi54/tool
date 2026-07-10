@@ -1,4 +1,9 @@
-export type ToolCategoryId = "data-format" | "encoding" | "time" | "text";
+export type ToolCategoryId =
+  | "data-format"
+  | "encoding"
+  | "time"
+  | "text"
+  | "qrcode";
 
 export type ToolStatus = "available" | "planned";
 

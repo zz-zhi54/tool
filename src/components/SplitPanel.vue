@@ -1,21 +1,32 @@
 <script setup lang="ts">
 import { computed, onBeforeUnmount, ref } from "vue";
 
-import { load, save } from "../utils/storage";
+import { load, SETTINGS, save } from "../utils/storage";
 
 /**
  * 左右分栏容器组件。
  *
  * 传入 panelKey 启用可拖拽并持久化到 localStorage；不传则固定 50/50。
+ * 默认百分比优先取自 utils/storage 的 SETTINGS 元数据，保证设置页与组件
+ * 第一次打开时的初始宽度一致；找不到回落到 50。
  */
+const FALLBACK_PERCENT = 50;
+
+function lookupDefault(key: string): number {
+  const meta = SETTINGS.find((s) => s.key === key);
+  return typeof meta?.defaultValue === "number"
+    ? meta.defaultValue
+    : FALLBACK_PERCENT;
+}
+
 const props = withDefaults(
   defineProps<{
     /** localStorage 键名；不传则固定 50/50 不可拖拽 */
     panelKey?: string | null;
-    /** 无存储键时的左侧面板百分比，默认 50 */
+    /** 无存储键时，或 SETTINGS 未登记时的左侧面板百分比，默认 50 */
     defaultPercent?: number;
   }>(),
-  { panelKey: null, defaultPercent: 50 },
+  { panelKey: null, defaultPercent: FALLBACK_PERCENT },
 );
 
 const resizable = computed(() => props.panelKey !== null);
@@ -40,7 +51,10 @@ const rightStyle = computed(() =>
 
 function readPercent(): number {
   if (!props.panelKey) return props.defaultPercent;
-  return clampPercent(load(props.panelKey, props.defaultPercent));
+  // 优先读取存储；未持久化时使用 SETTINGS 元数据的默认值，保证与设置页一致。
+  return clampPercent(
+    load<number>(props.panelKey, lookupDefault(props.panelKey)),
+  );
 }
 
 function savePercent(): void {

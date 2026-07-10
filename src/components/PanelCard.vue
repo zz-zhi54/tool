@@ -7,7 +7,7 @@ import { getIconByName } from "../utils/icons";
  * 统一工具页面中左右面板的卡片结构：
  * 标题栏（图标 + 文字 + 可选操作区）+ 分隔线 + 内容区。
  *
- * 用于 base64-codec、sql-generator、regex-tester 等使用固定分栏的工具页面。
+ * 用于 sql-generator、regex-tester、time-hub 等使用固定分栏的工具页面。
  * JSON/YAML 格式化的子组件（InputPanel、JsonTreePanel 等）自带卡片壳，不需要此组件。
  */
 withDefaults(
@@ -18,10 +18,17 @@ withDefaults(
     icon?: string;
     /** 内容区 overflow 行为，默认 hidden */
     overflow?: "hidden" | "auto";
+    /**
+     * 紧凑模式：根容器不再铺满父级高度，改由内容驱动，
+     * 适用于"输入框只需要几行"的场景（如正则/转义/大小写）。
+     * 默认 false（沿用 height: 100%）。
+     */
+    compact?: boolean;
   }>(),
   {
     icon: "FileTextOutlined",
     overflow: "hidden",
+    compact: false,
   },
 );
 </script>
@@ -29,13 +36,10 @@ withDefaults(
 <template>
   <section
     class="d-flex flex-column"
-    style="
-      height: 100%;
-      min-height: 0;
-      overflow: hidden;
-      border: 1px solid var(--app-border);
-      border-radius: 4px;
-      background-color: var(--app-surface);
+    :style="
+      compact
+        ? 'overflow: hidden; border: 1px solid var(--app-border); border-radius: 4px; background-color: var(--app-surface);'
+        : 'height: 100%; min-height: 0; overflow: hidden; border: 1px solid var(--app-border); border-radius: 4px; background-color: var(--app-surface);'
     "
   >
     <header
@@ -58,7 +62,7 @@ withDefaults(
       <slot name="actions" />
     </header>
 
-    <div class="pa-2" :style="{ flex: 1, minHeight: 0, overflow }">
+    <div class="pa-2" :style="compact ? { overflow } : { flex: 1, minHeight: 0, overflow }">
       <slot />
     </div>
   </section>

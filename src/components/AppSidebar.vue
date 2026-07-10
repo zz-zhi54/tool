@@ -20,6 +20,7 @@ import type {
 import { type ThemeName, useAppTheme } from "../composables/useAppTheme";
 import { load, save } from "../utils/storage";
 import { getIconByName } from "../utils/icons";
+import UpdateEntryButton from "./UpdateEntryButton.vue";
 
 defineProps<{
   currentToolId: string;
@@ -206,6 +207,8 @@ const noDragStyle = {
           </a-menu>
         </template>
       </a-dropdown>
+
+      <UpdateEntryButton variant="sidebar" :collapsed="isCollapsed" />
 
       <a-button
         block

@@ -13,17 +13,14 @@ export const PANEL_KEYS = {
   yamlFormatter: "yaml-formatter:panel-percent",
   xmlFormatter: "xml-formatter:panel-percent",
   tomlFormatter: "toml-formatter:panel-percent",
-  base64Codec: "base64-codec:panel-percent",
-  urlCodec: "url-codec:panel-percent",
-  hexCodec: "hex-codec:panel-percent",
+  encodingHub: "encoding-hub:panel-percent",
   htmlEntityCodec: "html-entity-codec:panel-percent",
-  unicodeCodec: "unicode-escape:panel-percent",
+  timeHub: "time-hub:panel-percent",
+  textHub: "text-hub:panel-percent",
   regexTester: "regex-tester:panel-percent",
   sqlGenerator: "sql-generator:panel-percent",
-  escapeTool: "escape-tool:panel-percent",
   textDiff: "text-diff:panel-percent",
-  caseConverter: "case-converter:panel-percent",
-  lineOps: "line-ops:panel-percent",
+  qrcodeTool: "qrcode-tool:panel-percent",
 } as const;
 
 export const REGEX_FLAGS_KEY = "regex-tester:flags";
@@ -57,6 +54,7 @@ export type SettingGroup =
   | "layout-encoding"
   | "layout-time"
   | "layout-text"
+  | "layout-qrcode"
   | "regexTester"
   | "sqlGenerator";
 
@@ -129,21 +127,18 @@ export const SETTINGS: SettingMeta[] = [
   LAYOUT_ENTRY(PANEL_KEYS.yamlFormatter, "YAML 格式化", "layout-data-format"),
   LAYOUT_ENTRY(PANEL_KEYS.xmlFormatter, "XML 格式化", "layout-data-format"),
   LAYOUT_ENTRY(PANEL_KEYS.tomlFormatter, "TOML 格式化", "layout-data-format"),
-  LAYOUT_ENTRY(PANEL_KEYS.base64Codec, "Base64 编解码", "layout-encoding"),
-  LAYOUT_ENTRY(PANEL_KEYS.urlCodec, "URL 编解码", "layout-encoding"),
-  LAYOUT_ENTRY(PANEL_KEYS.hexCodec, "Hex 编解码", "layout-encoding"),
+  LAYOUT_ENTRY(PANEL_KEYS.encodingHub, "编码转换", "layout-encoding"),
   LAYOUT_ENTRY(
     PANEL_KEYS.htmlEntityCodec,
     "HTML 实体编解码",
     "layout-encoding",
   ),
-  LAYOUT_ENTRY(PANEL_KEYS.unicodeCodec, "Unicode 转义", "layout-encoding"),
+  LAYOUT_ENTRY(PANEL_KEYS.timeHub, "时间工具", "layout-time"),
+  LAYOUT_ENTRY(PANEL_KEYS.textHub, "文本工具", "layout-text"),
   LAYOUT_ENTRY(PANEL_KEYS.regexTester, "正则测试", "layout-text"),
   LAYOUT_ENTRY(PANEL_KEYS.sqlGenerator, "SQL IN 生成器", "layout-text"),
-  LAYOUT_ENTRY(PANEL_KEYS.escapeTool, "转义工具", "layout-text"),
   LAYOUT_ENTRY(PANEL_KEYS.textDiff, "文本 Diff", "layout-text"),
-  LAYOUT_ENTRY(PANEL_KEYS.caseConverter, "大小写转换", "layout-text"),
-  LAYOUT_ENTRY(PANEL_KEYS.lineOps, "行处理", "layout-text"),
+  LAYOUT_ENTRY(PANEL_KEYS.qrcodeTool, "二维码工具", "layout-qrcode"),
   {
     key: REGEX_FLAGS_KEY,
     label: "默认正则标志",
@@ -193,20 +188,26 @@ export const SETTING_GROUPS: SettingGroupMeta[] = [
     id: "layout-encoding",
     title: "编码转换",
     description:
-      "Base64 / URL / Hex / HTML 实体 / Unicode 编解码的左右分栏宽度。",
+      "编码转换统一入口（Base64 / URL / Hex / Unicode）与 HTML 实体编解码的左右分栏宽度。",
     parent: "layout",
   },
   {
     id: "layout-time",
     title: "时间工具",
-    description:
-      "暂无布局设置（时间戳转换 / 时区转换 / 日期计算器不使用 SplitPanel）。",
+    description: "时间工具统一入口（时间戳 / 时区 / 日期计算）的左右分栏宽度。",
     parent: "layout",
   },
   {
     id: "layout-text",
     title: "文本工具",
-    description: "正则 / SQL / 转义 / Diff / 大小写 / 行处理的左右分栏宽度。",
+    description:
+      "文本工具统一入口（转义 / 大小写 / 行处理）与 SQL / 正则 / Diff 的左右分栏宽度。",
+    parent: "layout",
+  },
+  {
+    id: "layout-qrcode",
+    title: "二维码工具",
+    description: "二维码工具的左右分栏宽度。",
     parent: "layout",
   },
   {
