@@ -31,30 +31,52 @@ const props = withDefaults(
   { collapsed: false },
 );
 
-const { status, info } = useAutoUpdater();
+const { status, info, hasUpdate: remoteHasUpdate } = useAutoUpdater();
 const appVersion = packageInfo.version;
 
-const hasUpdate = computed(() => status.value === "available");
-const isUpToDate = computed(() => status.value === "up-to-date");
+/**
+ * 是否有更新：优先看用户主动检查后的 status（精确，包含版本号），
+ * 否则看后台静默检查的红点标志（粗略，只知道"有/没有"）。
+ *
+ * 主动检查能拿到版本号用于文案；后台检查只能告诉 sidebar 该不该显示红点。
+ */
+const isAvailable = computed(() => status.value === "available");
 const newVersion = computed(() => info.value?.version ?? "");
+const isUpToDate = computed(() => status.value === "up-to-date");
 const isChecking = computed(() => status.value === "checking");
+
+/**
+ * 是否显示红点 + 升级样式（"有可用更新"）。
+ *
+ * - isAvailable（用户主动检查拿到 update）：有精确版本号，强提示
+ * - remoteHasUpdate（后台静默检查拿到的红点）：只知道"有"，弱提示
+ *
+ * 这里只看"是否值得点"；按钮文案和危险样式走更细的判断。
+ */
+const showDot = computed(
+  () => isAvailable.value || remoteHasUpdate.value,
+);
+
+/** 升级样式：仅在 isAvailable（拿到精确版本号）时启用。 */
+const isUpgrade = computed(() => isAvailable.value);
 
 /** 状态对应按钮 type（颜色由 antdv 框架主题控制）。 */
 const buttonType = computed<"primary" | "default" | "text">(() => {
-  if (hasUpdate.value) return "primary";
+  if (isUpgrade.value) return "primary";
   return "text";
 });
 
 /**
  * 按钮文本：根据是否有新版本显示不同文案。
  *
- * - 有更新（available）：「升级 v新」+ 火箭图标 + 红色 + 红点
- * - 已是最新（up-to-date）：「已是最新 · v当前」+ ✓ 图标
- * - 检查中（checking）：「检查更新…」+ loading
- * - 其他：兜底显示「更新 · v当前」+ 下载图标
+ * - 用户已 check 过、available：「升级 v新」
+ * - 后台静默拿到红点（不知道版本号）：「更新 · v当前」
+ * - 已是最新（up-to-date）：「已是最新 · v当前」
+ * - 检查中（checking）：「检查更新…」+ loading 由模板渲染
+ * - 其他：兜底「更新 · v当前」
  */
 const label = computed(() => {
-  if (hasUpdate.value && newVersion.value) {
+  if (isUpgrade.value && newVersion.value) {
     return `升级 v${newVersion.value}`;
   }
   if (isUpToDate.value) {
@@ -64,7 +86,7 @@ const label = computed(() => {
 });
 
 const tooltip = computed(() => {
-  if (hasUpdate.value && newVersion.value) {
+  if (isUpgrade.value && newVersion.value) {
     return `当前 v${appVersion} → v${newVersion.value}，点击查看`;
   }
   if (isUpToDate.value) {
@@ -92,7 +114,7 @@ function onClick() {
       跟主题 / 设置按钮对齐。
     -->
     <a-badge
-      :dot="hasUpdate"
+      :dot="showDot"
       :offset="[-2, 2]"
       :style="{ display: 'block', width: '100%' }"
     >
@@ -100,13 +122,13 @@ function onClick() {
         block
         size="small"
         :type="buttonType"
-        :danger="hasUpdate"
+        :danger="isUpgrade"
         :loading="isChecking"
         data-tauri-no-drag
         @click="onClick"
       >
         <template #icon>
-          <RocketOutlined v-if="hasUpdate" />
+          <RocketOutlined v-if="isUpgrade" />
           <CheckCircleOutlined v-else-if="isUpToDate" />
           <CloudDownloadOutlined v-else />
         </template>

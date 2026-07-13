@@ -212,7 +212,7 @@ function getPopupContainer(trigger: HTMLElement): HTMLElement {
         </template>
       </a-dropdown>
 
-      <UpdateEntryButton variant="sidebar" :collapsed="collapsed" />
+      <UpdateEntryButton :collapsed="collapsed" />
 
       <a-button
         block

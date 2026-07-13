@@ -1,26 +1,27 @@
 /**
  * 应用内自动更新 composable。
  *
- * 封装 Tauri 官方 updater 插件（@tauri-apps/plugin-updater）的两条调用链：
- *
- * 1. 仅检查（不下、不弹窗）→ {@link useAutoUpdater#checkOnly}
- * 2. 检查 + 下载 + 安装    → {@link useAutoUpdater#runUpdateFlow}
- * 3. 安装完成后立即重启    → {@link useAutoUpdater#relaunch}
+ * 封装 Tauri 官方 updater 插件（@tauri-apps/plugin-updater）。
  *
  * 设计要点：
  *
  * - **单例状态**：所有 ref 都在模块顶层，多个组件同时调用 `useAutoUpdater()`
- *   会拿到同一组响应式状态。这样挂在不同位置的更新入口（侧边栏、顶部导航）
+ *   会拿到同一组响应式状态。这样挂在不同位置的更新入口（侧边栏、设置页）
  *   能看到一致的 status / info / progress。
- * - 状态机：`idle | checking | up-to-date | available | downloading | ready | error`。
+ * - **状态机**：`idle | checking | up-to-date | available | downloading | ready | error`。
  *   UI 只需绑定一个 status + 一个 progress（0-100），不直接处理 Update 对象，
  *   避免组件里堆 try/catch。
- * - `isTauri() && import.meta.env.PROD` 双重短路：dev / 纯 Vite 打开时
- *   check() 会拿真实远端 latest.json 与 0.0.0 比较，误判为"有更新"，
- *   还会真的触发下载。`checkOnly` 在非生产环境静默返回 idle 不污染状态；
- *   `runUpdateFlow` 则把错误状态写入 error（用户主动点击时给出明确提示）。
- * - 下载进度走 Update.downloadAndInstall 的事件回调（Started / Progress / Finished），
- *   这里只对外暴露 `downloaded` / `total` 两个 ref，UI 算 percent。
+ * - **使用官方 API**：
+ *   - `check({ timeout })` 原生支持超时，不在前端再包一层 Promise.race
+ *   - `update.downloadAndInstall(cb)` 的 cb 签名就是 `{event, data}` 格式，
+ *     Started/Progress/Finished 是官方事件名，不是自己造的协议
+ *   - 不缓存 Update 对象：每次 check 都是新对象，避免 stale handle
+ * - **避免后台检查与用户主动检查互相打断**：
+ *   AppShell 启动时的静默后台检查只读 latest.json，不操作 status；
+ *   真正"动状态机"的只有用户主动行为（点 sidebar/设置页的更新按钮）。
+ *   之前两个 checkOnly 并发跑会让 status 反复被 reset，状态机混乱。
+ * - **dev / 浏览器环境**：`checkOnly` 静默返回 idle 不污染 error；
+ *   `runUpdateFlow` 把错误状态写入 error（用户主动点击时给出明确提示）。
  *
  * 后端配套：
  *
@@ -34,6 +35,9 @@ import { computed, ref, shallowRef } from "vue";
 import { isTauri } from "@tauri-apps/api/core";
 import { check } from "@tauri-apps/plugin-updater";
 import { relaunch as relaunchProcess } from "@tauri-apps/plugin-process";
+
+/** check() 超时：30s 拿不到 latest.json 就 reject，避免任何 hang 场景。 */
+const CHECK_TIMEOUT_MS = 30_000;
 
 /** 更新流程的状态机。UI 据此切换 Modal 内容。 */
 export type UpdateStatus =
@@ -72,6 +76,13 @@ const progress = computed(() =>
     : 0,
 );
 
+/**
+ * AppShell 启动时静默跑 check()，仅更新 "hasUpdate" 红点，不动 status。
+ *
+ * 与"用户主动检查"分离：避免两个 checkOnly 并发把 status 反复 reset。
+ */
+const hasUpdate = ref(false);
+
 function reset() {
   status.value = "idle";
   info.value = null;
@@ -82,25 +93,39 @@ function reset() {
 
 export function useAutoUpdater() {
   /**
-   * 仅检查更新，不触发下载。
+   * 静默后台检查：仅刷新 hasUpdate 红点，不动 status / info。
    *
-   * 用在 AppShell 启动时跑一次静默后台检查 —— 让 chrome 上的"更新"按钮
-   * 在没人点时也能根据 status 切换成"有更新"红点状态。
+   * 用在 AppShell onMounted —— 启动 app 后悄悄看一眼 latest.json，
+   * 有更新就在 sidebar 的"更新"按钮上点个红点，不打扰用户。
    *
-   * dev / 非 Tauri 环境直接返回 idle，不污染 error。
-   * 失败也会把 status 写到 "error"，但调用方选择忽略即可。
+   * 网络失败静默忽略（不要给用户弹错误信息——他根本没主动点击）。
+   */
+  async function checkSilently(): Promise<void> {
+    if (!import.meta.env.PROD || !isTauri()) return;
+
+    try {
+      const update = await check({ timeout: CHECK_TIMEOUT_MS });
+      hasUpdate.value = update !== null;
+    } catch {
+      // 网络错 / 签名错 / 超时 —— 静默忽略，保持上次状态
+      hasUpdate.value = false;
+    }
+  }
+
+  /**
+   * 仅检查更新，不触发下载。会被"点更新按钮"主动调用，操作完整状态机。
+   *
+   * 不复用后台静默检查的结果：用户主动点 = 拿"现在"的结果，不拿几秒前的缓存。
    */
   async function checkOnly(): Promise<UpdateStatus> {
-    if (!import.meta.env.PROD || !isTauri()) {
-      return "idle";
-    }
+    if (!import.meta.env.PROD || !isTauri()) return "idle";
 
     reset();
     status.value = "checking";
 
     let update;
     try {
-      update = await check();
+      update = await check({ timeout: CHECK_TIMEOUT_MS });
     } catch (cause) {
       status.value = "error";
       error.value = { stage: "check", cause };
@@ -109,6 +134,7 @@ export function useAutoUpdater() {
 
     if (!update) {
       status.value = "up-to-date";
+      hasUpdate.value = false;
       return status.value;
     }
 
@@ -117,6 +143,7 @@ export function useAutoUpdater() {
       notes: update.body ?? undefined,
       date: update.date ?? undefined,
     };
+    hasUpdate.value = true;
     status.value = "available";
     return status.value;
   }
@@ -124,10 +151,10 @@ export function useAutoUpdater() {
   /**
    * 检查 + 下载 + 安装。完成后**不**自动重启 —— 调用方在用户确认后调 {@link relaunch}。
    *
-   * 返回最终状态：调用方若想自己兜底重试可以看这个；通常直接观察 `status.value` 即可。
+   * 流程：checkOnly → 拿到 update → downloadAndInstall。
+   * downloadAndInstall 是官方单步 API，下载完成后自动 install，无需手动调 install()。
    */
   async function runUpdateFlow(): Promise<UpdateStatus> {
-    // 双重短路：dev / 浏览器环境直接返回带错误的结果，让 UI 给出明确提示。
     if (!import.meta.env.PROD || !isTauri()) {
       status.value = "error";
       error.value = {
@@ -143,7 +170,7 @@ export function useAutoUpdater() {
 
     let update;
     try {
-      update = await check();
+      update = await check({ timeout: CHECK_TIMEOUT_MS });
     } catch (cause) {
       status.value = "error";
       error.value = { stage: "check", cause };
@@ -152,6 +179,7 @@ export function useAutoUpdater() {
 
     if (!update) {
       status.value = "up-to-date";
+      hasUpdate.value = false;
       return status.value;
     }
 
@@ -160,9 +188,13 @@ export function useAutoUpdater() {
       notes: update.body ?? undefined,
       date: update.date ?? undefined,
     };
-    status.value = "available";
+    hasUpdate.value = true;
 
     // ── 下载 + 安装 ────────────────────────────────────
+    // 进度 callback 形参就是官方 {event, data} 协议：
+    //   Started  → event.data.contentLength
+    //   Progress → event.data.chunkLength
+    //   Finished → no data
     status.value = "downloading";
 
     try {
@@ -208,8 +240,10 @@ export function useAutoUpdater() {
     total,
     progress,
     error,
+    hasUpdate,
     // 行为
     checkOnly,
+    checkSilently,
     runUpdateFlow,
     relaunch,
     reset,
