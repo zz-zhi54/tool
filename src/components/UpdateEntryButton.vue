@@ -85,7 +85,17 @@ function onClick() {
 
 <template>
   <a-tooltip :title="tooltip" placement="right">
-    <a-badge :dot="hasUpdate" :offset="[-2, 2]">
+    <!--
+      a-badge 渲染为 <span>，默认 display:inline-block 让 sidebar
+      底部三个按钮宽度不一致（更新 115 vs 主题/设置 152）。
+      给 wrapper 加 display:block + width:100% 让按钮占满 sidebar 宽度，
+      跟主题 / 设置按钮对齐。
+    -->
+    <a-badge
+      :dot="hasUpdate"
+      :offset="[-2, 2]"
+      :style="{ display: 'block', width: '100%' }"
+    >
       <a-button
         block
         size="small"
