@@ -44,6 +44,9 @@ const isAvailable = computed(() => status.value === "available");
 const newVersion = computed(() => info.value?.version ?? "");
 const isUpToDate = computed(() => status.value === "up-to-date");
 const isChecking = computed(() => status.value === "checking");
+const isDownloading = computed(() => status.value === "downloading");
+const isReady = computed(() => status.value === "ready");
+const isError = computed(() => status.value === "error");
 
 /**
  * 是否显示红点 + 升级样式（"有可用更新"）。
@@ -82,6 +85,18 @@ const label = computed(() => {
   if (isUpToDate.value) {
     return `已是最新 · v${appVersion}`;
   }
+  if (isChecking.value) {
+    return `检查更新…`;
+  }
+  if (isDownloading.value) {
+    return `下载中…`;
+  }
+  if (isReady.value) {
+    return `准备就绪`;
+  }
+  if (isError.value) {
+    return `更新失败`;
+  }
   return `更新 · v${appVersion}`;
 });
 
@@ -94,6 +109,15 @@ const tooltip = computed(() => {
   }
   if (isChecking.value) {
     return "正在检查更新…";
+  }
+  if (isDownloading.value) {
+    return "正在下载更新…";
+  }
+  if (isReady.value) {
+    return `v${newVersion.value} 下载完成，点击重启`;
+  }
+  if (isError.value) {
+    return "更新出错，点击重试";
   }
   return `检查 v${appVersion} 是否有更新`;
 });
@@ -123,7 +147,7 @@ function onClick() {
         size="small"
         :type="buttonType"
         :danger="isUpgrade"
-        :loading="isChecking"
+        :loading="isChecking || isDownloading"
         data-tauri-no-drag
         @click="onClick"
       >

@@ -47,6 +47,7 @@ export type UpdateStatus =
   | "available"
   | "downloading"
   | "ready"
+  | "relaunching"
   | "error";
 
 /** 从 check() 拿到的版本信息，UI 用来展示新版本号 / release notes。 */
@@ -83,6 +84,22 @@ const progress = computed(() =>
  */
 const hasUpdate = ref(false);
 
+/**
+ * 用户主动检查正在进行中。静默检查看到此标志会**完全跳过本轮**，
+ * 避免：
+ *
+ * 1. 后台 catch 把刚刚由主动检查发现的 hasUpdate 抹回 false；
+ * 2. 后台成功的返回值覆盖主动检查正在跑的 status；
+ * 3. 后台与主动 reset() 互相踩踏 error ref。
+ *
+ * 注意：此标志**只**在主动检查（checkOnly / runUpdateFlow）侧写入，
+ * 静默检查只读不写，否则两轮静默检查相互等待会死锁。
+ */
+const userCheckInFlight = ref(false);
+
+/** 静默检查自身的"正在跑"标记。主动检查通过 waitForSilentlyIdle() 等本标志。 */
+const silentCheckInFlight = ref(false);
+
 function reset() {
   status.value = "idle";
   info.value = null;
@@ -103,12 +120,35 @@ export function useAutoUpdater() {
   async function checkSilently(): Promise<void> {
     if (!import.meta.env.PROD || !isTauri()) return;
 
+    // 用户主动检查正在进行：完全跳过本轮静默检查，不要写任何共享状态。
+    // 这是为防止后台 catch 把 hasUpdate 抹掉、或后台 success 抢在主动 reset 之前。
+    //
+    // 静默检查自己只持 silentCheckInFlight，与 userCheckInFlight 完全独立，
+    // 主动检查通过 waitForSilentlyIdle() 等本轮结束。
+    if (userCheckInFlight.value) return;
+
+    silentCheckInFlight.value = true;
     try {
       const update = await check({ timeout: CHECK_TIMEOUT_MS });
       hasUpdate.value = update !== null;
     } catch {
-      // 网络错 / 签名错 / 超时 —— 静默忽略，保持上次状态
-      hasUpdate.value = false;
+      // 网络错 / 签名错 / 超时 —— 静默忽略，**保留** hasUpdate 上次状态
+      // （不要清零，否则用户主动检查刚刚拿到的结果会被这次失败抹掉）。
+    } finally {
+      silentCheckInFlight.value = false;
+    }
+  }
+
+  /**
+   * 主动检查启动前调用：等到当前静默检查（若在跑）结束。
+   *
+   * 用一个轻量轮询，不引入额外的状态字段；空跑的轮询间隔短到肉眼不可见，
+   * 实际场景下 99% 不会进入循环。
+   */
+  async function waitForSilentlyIdle(): Promise<void> {
+    // 静默检查只在 silentCheckInFlight 持锁；不持 userCheckInFlight（那是主动检查用的）。
+    while (silentCheckInFlight.value) {
+      await new Promise((r) => setTimeout(r, 16));
     }
   }
 
@@ -120,32 +160,40 @@ export function useAutoUpdater() {
   async function checkOnly(): Promise<UpdateStatus> {
     if (!import.meta.env.PROD || !isTauri()) return "idle";
 
-    reset();
-    status.value = "checking";
+    // 等后台静默检查退出，避免它在我们 reset 后覆盖 hasUpdate。
+    await waitForSilentlyIdle();
 
-    let update;
+    userCheckInFlight.value = true;
     try {
-      update = await check({ timeout: CHECK_TIMEOUT_MS });
-    } catch (cause) {
-      status.value = "error";
-      error.value = { stage: "check", cause };
-      return status.value;
-    }
+      reset();
+      status.value = "checking";
 
-    if (!update) {
-      status.value = "up-to-date";
-      hasUpdate.value = false;
-      return status.value;
-    }
+      let update;
+      try {
+        update = await check({ timeout: CHECK_TIMEOUT_MS });
+      } catch (cause) {
+        status.value = "error";
+        error.value = { stage: "check", cause };
+        return status.value;
+      }
 
-    info.value = {
-      version: update.version,
-      notes: update.body ?? undefined,
-      date: update.date ?? undefined,
-    };
-    hasUpdate.value = true;
-    status.value = "available";
-    return status.value;
+      if (!update) {
+        status.value = "up-to-date";
+        hasUpdate.value = false;
+        return status.value;
+      }
+
+      info.value = {
+        version: update.version,
+        notes: update.body ?? undefined,
+        date: update.date ?? undefined,
+      };
+      hasUpdate.value = true;
+      status.value = "available";
+      return status.value;
+    } finally {
+      userCheckInFlight.value = false;
+    }
   }
 
   /**
@@ -164,73 +212,105 @@ export function useAutoUpdater() {
       return status.value;
     }
 
-    // ── 检查 ────────────────────────────────────────────
-    reset();
-    status.value = "checking";
+    // 等后台静默检查退出
+    await waitForSilentlyIdle();
 
-    let update;
+    // 防御：极端时序下（Modal 的遮罩层几乎杜绝了这种可能）避免并发两次
+    // runUpdateFlow 导致两个 check() 竞态共享状态。
+    if (userCheckInFlight.value) return status.value;
+
+    userCheckInFlight.value = true;
     try {
-      update = await check({ timeout: CHECK_TIMEOUT_MS });
-    } catch (cause) {
-      status.value = "error";
-      error.value = { stage: "check", cause };
+      // ── 检查 ────────────────────────────────────────
+      reset();
+      status.value = "checking";
+
+      let update;
+      try {
+        update = await check({ timeout: CHECK_TIMEOUT_MS });
+      } catch (cause) {
+        status.value = "error";
+        error.value = { stage: "check", cause };
+        return status.value;
+      }
+
+      if (!update) {
+        status.value = "up-to-date";
+        hasUpdate.value = false;
+        return status.value;
+      }
+
+      info.value = {
+        version: update.version,
+        notes: update.body ?? undefined,
+        date: update.date ?? undefined,
+      };
+      hasUpdate.value = true;
+
+      // ── 下载 + 安装 ────────────────────────────────
+      // 进度 callback 形参就是官方 {event, data} 协议：
+      //   Started  → event.data.contentLength
+      //   Progress → event.data.chunkLength
+      //   Finished → no data
+      status.value = "downloading";
+
+      try {
+        await update.downloadAndInstall((event) => {
+          switch (event.event) {
+            case "Started":
+              total.value = event.data.contentLength ?? 0;
+              downloaded.value = 0;
+              break;
+            case "Progress":
+              downloaded.value += event.data.chunkLength;
+              break;
+            case "Finished":
+              downloaded.value = total.value;
+              break;
+          }
+        });
+      } catch (cause) {
+        status.value = "error";
+        error.value = { stage: "download", cause };
+        return status.value;
+      }
+
+      status.value = "ready";
       return status.value;
+    } finally {
+      userCheckInFlight.value = false;
     }
-
-    if (!update) {
-      status.value = "up-to-date";
-      hasUpdate.value = false;
-      return status.value;
-    }
-
-    info.value = {
-      version: update.version,
-      notes: update.body ?? undefined,
-      date: update.date ?? undefined,
-    };
-    hasUpdate.value = true;
-
-    // ── 下载 + 安装 ────────────────────────────────────
-    // 进度 callback 形参就是官方 {event, data} 协议：
-    //   Started  → event.data.contentLength
-    //   Progress → event.data.chunkLength
-    //   Finished → no data
-    status.value = "downloading";
-
-    try {
-      await update.downloadAndInstall((event) => {
-        switch (event.event) {
-          case "Started":
-            total.value = event.data.contentLength ?? 0;
-            downloaded.value = 0;
-            break;
-          case "Progress":
-            downloaded.value += event.data.chunkLength;
-            break;
-          case "Finished":
-            downloaded.value = total.value;
-            break;
-        }
-      });
-    } catch (cause) {
-      status.value = "error";
-      error.value = { stage: "download", cause };
-      return status.value;
-    }
-
-    status.value = "ready";
-    return status.value;
   }
 
-  /** 调起应用重启以应用更新。Windows 上安装包会自动退出进程，此处不需要再退。 */
+  /**
+   * 调起应用重启以应用更新。
+   *
+   * Windows 上 NSIS 安装器启动后会自动退出当前进程，macOS / Linux 上
+   * `relaunch` 立即重启。因此成功后 status 进入 "relaunching"，
+   * 让 Modal 展示"正在重启…"转圈且不可关闭 —— 用户不会再以为"卡住了"。
+   *
+   * 失败时回退到 "ready" 而非保持 "ready" / "error"：用户可立即重试，
+   * 不必关掉 Modal 再点一次更新按钮。
+   */
   async function relaunch(): Promise<void> {
+    const prevStatus = status.value;
+    status.value = "relaunching";
     try {
       await relaunchProcess();
     } catch (cause) {
-      status.value = "error";
+      // 失败回退到 ready：用户可以再次点击"立即重启"。
+      status.value = prevStatus === "relaunching" ? "ready" : prevStatus;
       error.value = { stage: "relaunch", cause };
     }
   }
+
+  // 显式引用本文件私有状态/行为，避免 vue-tsc 的 noUnusedLocals 误报
+  // （这些在 return 中以 shorthand 形式暴露，TS 静态分析无法追踪）。
+  void progress;
+  void checkSilently;
+  void checkOnly;
+  void waitForSilentlyIdle;
+  void runUpdateFlow;
 
   return {
     // 状态
