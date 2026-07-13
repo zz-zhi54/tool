@@ -149,7 +149,9 @@ onBeforeUnmount(() => {
       </a-layout-sider>
 
       <a-layout-content style="padding: 8px; min-width: 0">
-        <component :is="currentView" />
+        <KeepAlive>
+          <component :is="currentView" />
+        </KeepAlive>
       </a-layout-content>
     </a-layout>
 

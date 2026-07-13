@@ -1,6 +1,6 @@
 [package]
 name = "tool"
-version = "0.1.6"
+version = "0.1.7"
 description = "Tool Workbench - 基于 Tauri 2 + Vue 3 + TypeScript 的桌面工具箱"
 authors = ["zz_zhi <zz_zhi@outlook.com>"]
 edition = "2021"
