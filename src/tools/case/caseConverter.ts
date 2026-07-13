@@ -15,15 +15,15 @@ export type CaseStyle =
   | "kebab-case"
   | "CONSTANT_CASE";
 
-export const CASE_STYLES: { id: CaseStyle; label: string }[] = [
-  { id: "UPPER", label: "UPPER CASE" },
-  { id: "lower", label: "lower case" },
-  { id: "Title Case", label: "Title Case" },
-  { id: "camelCase", label: "camelCase" },
-  { id: "PascalCase", label: "PascalCase" },
-  { id: "snake_case", label: "snake_case" },
-  { id: "kebab-case", label: "kebab-case" },
-  { id: "CONSTANT_CASE", label: "CONSTANT_CASE" },
+export const CASE_STYLES: { id: CaseStyle; label: string; title: string }[] = [
+  { id: "UPPER", label: "全大写", title: "UPPER CASE" },
+  { id: "lower", label: "全小写", title: "lower case" },
+  { id: "Title Case", label: "首字母大写", title: "Title Case" },
+  { id: "camelCase", label: "小驼峰", title: "camelCase" },
+  { id: "PascalCase", label: "大驼峰", title: "PascalCase" },
+  { id: "snake_case", label: "下划线", title: "snake_case" },
+  { id: "kebab-case", label: "连字符", title: "kebab-case" },
+  { id: "CONSTANT_CASE", label: "常量", title: "CONSTANT_CASE" },
 ];
 
 /** 把输入拆解为「词」数组（统一小写形式）。 */

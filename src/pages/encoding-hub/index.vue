@@ -9,6 +9,9 @@
  * 实时转换模式：每节独立维护 input / direction，输出由 computed
  * 派生，输入即转换、方向切换即反向重算，无须点击"编码/解码"按钮。
  *
+ * 末尾追加 UUID 生成节：UUID v1/v4/v7 是基于 base16 编码的随机或
+ * 时序标识符，与"编码/解码"语义同源，因此与本 hub 同址。
+ *
  * UI 完全使用 ant-design-vue 组件，无手写 CSS。
  */
 import { computed, ref } from "vue";
@@ -25,6 +28,11 @@ import {
   unescapeUnicode,
   validateUnicodeEscape,
 } from "../../tools/unicode/unicodeEscape";
+import {
+  generateUuidBatch,
+  type UuidOptions,
+  type UuidVersion,
+} from "../../tools/uuid/uuidGenerator";
 import { showInfo, showSuccess } from "../../composables/useMessage";
 
 /** 转换方向。 */
@@ -237,6 +245,42 @@ function handleClear(section: CodecSection) {
   section.state.direction = "forward";
   showInfo("已清空");
 }
+
+/* ── UUID ─────────────────────────────────────────── */
+
+const uuidVersion = ref<UuidVersion>("v4");
+const uuidCount = ref<number>(8);
+const uuidUppercase = ref<boolean>(false);
+const uuidWithHyphens = ref<boolean>(true);
+const uuids = ref<string[]>([]);
+
+const uuidVersionOptions: { value: UuidVersion; label: string }[] = [
+  { value: "v1", label: "v1（基于时间与 MAC）" },
+  { value: "v4", label: "v4（随机）" },
+  { value: "v7", label: "v7（基于时间，可排序）" },
+];
+
+function handleUuidGenerate() {
+  const opts: UuidOptions = {
+    count: uuidCount.value,
+    uppercase: uuidUppercase.value,
+    withHyphens: uuidWithHyphens.value,
+  };
+  const result = generateUuidBatch(uuidVersion.value, opts);
+  uuids.value = result.ids;
+  showSuccess(`已生成 ${result.ids.length} 个 UUID`);
+}
+
+async function handleUuidCopyAll() {
+  if (uuids.value.length === 0) return;
+  await navigator.clipboard.writeText(uuids.value.join("\n"));
+  showSuccess("已复制全部 UUID");
+}
+
+function handleUuidClear() {
+  uuids.value = [];
+  showInfo("已清空");
+}
 </script>
 
 <template>
@@ -318,6 +362,93 @@ function handleClear(section: CodecSection) {
               style="flex: 1 1 auto; min-height: 0"
             />
           </a-flex>
+        </a-flex>
+      </a-flex>
+    </a-card>
+
+    <!-- ── UUID ──────────────────────────────────────── -->
+    <a-card size="small">
+      <a-flex vertical :gap="8" style="height: 320px">
+        <a-flex align="center" :gap="4" wrap>
+          <strong>UUID</strong>
+
+          <a-select
+            v-model:value="uuidVersion"
+            size="small"
+            style="width: 200px"
+            :options="uuidVersionOptions"
+          />
+
+          <a-flex align="center" :gap="4">
+            <a-typography-text type="secondary" style="font-size: 13px">
+              数量
+            </a-typography-text>
+            <a-input-number
+              v-model:value="uuidCount"
+              size="small"
+              :min="1"
+              :max="1000"
+              :step="1"
+              style="width: 110px"
+            />
+          </a-flex>
+
+          <a-checkbox v-model:checked="uuidUppercase">大写</a-checkbox>
+          <a-checkbox v-model:checked="uuidWithHyphens">带连字符 (8-4-4-4-12)</a-checkbox>
+
+          <a-tag color="cyan" size="small">{{ uuids.length }} 个</a-tag>
+
+          <a-flex :flex="'1 1 auto'" />
+
+          <a-button size="small" type="primary" @click="handleUuidGenerate">
+            生成
+          </a-button>
+          <a-button
+            size="small"
+            :disabled="uuids.length === 0"
+            @click="handleUuidCopyAll"
+          >
+            复制全部
+          </a-button>
+          <a-button
+            size="small"
+            :disabled="uuids.length === 0"
+            @click="handleUuidClear"
+          >
+            清空
+          </a-button>
+        </a-flex>
+
+        <a-flex
+          vertical
+          :gap="4"
+          style="flex: 1 1 auto; min-height: 0; overflow: auto"
+        >
+          <a-empty
+            v-if="uuids.length === 0"
+            description="选择版本与数量后点击「生成」"
+            :image="undefined"
+          >
+            <template #image><span /></template>
+          </a-empty>
+
+          <a-card
+            v-for="(id, idx) in uuids"
+            v-else
+            :key="idx"
+            size="small"
+            :body-style="{ padding: '4px 8px' }"
+          >
+            <a-flex align="center" :gap="8">
+              <a-tag color="blue" size="small">#{{ idx + 1 }}</a-tag>
+              <a-typography-text
+                copyable
+                style="flex: 1; word-break: break-all; font-size: 13px"
+              >
+                {{ id }}
+              </a-typography-text>
+            </a-flex>
+          </a-card>
         </a-flex>
       </a-flex>
     </a-card>
