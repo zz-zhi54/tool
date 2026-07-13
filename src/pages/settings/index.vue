@@ -18,10 +18,6 @@ import type {
   SettingSnapshot,
 } from "../../utils/storage";
 
-import packageInfo from "../../../package.json";
-
-const appVersion = packageInfo.version;
-
 const items = ref<SettingSnapshot[]>(getSettings());
 
 /**
@@ -116,21 +112,6 @@ function resetAll() {
             @change="onItemChange"
             @reset="resetItem"
           />
-        </a-flex>
-      </a-card>
-
-      <!-- 关于 -->
-      <a-card size="small" title="关于">
-        <a-flex vertical :gap="8">
-          <a-typography-text>
-            Tool Workbench — 基于 Tauri 2 + Vue 3 + TypeScript 的桌面工具箱。
-          </a-typography-text>
-          <a-typography-text type="secondary">
-            所有计算都在前端本地完成，不上传任何数据。
-          </a-typography-text>
-          <a-typography-text type="secondary">
-            当前版本 v{{ appVersion }}
-          </a-typography-text>
         </a-flex>
       </a-card>
     </a-flex>
