@@ -26,7 +26,7 @@ import { load, save } from "../utils/storage";
 
 type UpdateModalInstance = InstanceType<typeof UpdateModal>;
 
-const { checkOnly } = useAutoUpdater();
+const { checkSilently } = useAutoUpdater();
 const themeStore = useAppTheme();
 
 const currentToolId = ref(defaultToolId);
@@ -93,7 +93,7 @@ const updateModalRef = ref<UpdateModalInstance | null>(null);
 provide(OPEN_UPDATE_MODAL_KEY, () => updateModalRef.value?.open?.());
 
 onMounted(() => {
-  void checkOnly();
+  void checkSilently();
 
   // 初次同步
   syncNarrow();
