@@ -1,7 +1,7 @@
 {
   "$schema": "https://schema.tauri.app/config/2",
   "productName": "tool",
-  "version": "0.1.4",
+  "version": "0.1.5",
   "identifier": "com.zhide.tool",
   "build": {
     "beforeDevCommand": "npm run dev",
@@ -40,7 +40,8 @@
     "updater": {
       "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IEVFMTVDQjk0QzBFRTIyMkYKUldRdkl1N0FsTXNWN3N5S2hKN2VmV0pXbWdzZmRXNUtKaE10ZjRESjhOQ0pFSzZXZWV2REJCblYK",
       "endpoints": [
-        "https://github.com/zz-zhi54/tool/releases/latest/download/latest.json"
+        "https://github.com/zz-zhi54/tool/releases/latest/download/latest.json",
+        "https://gh-proxy.com/https://github.com/zz-zhi54/tool/releases/latest/download/latest.json"
       ],
       "windows": {
         "installMode": "passive"
