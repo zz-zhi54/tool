@@ -12,7 +12,7 @@
  * 这样把"流程是否要立刻跑"统一交给 Modal 内部根据 status 决定。
  */
 
-import { computed, inject, type InjectionKey } from "vue";
+import { computed, inject } from "vue";
 import {
   CheckCircleOutlined,
   CloudDownloadOutlined,
@@ -20,17 +20,8 @@ import {
 } from "@ant-design/icons-vue";
 
 import { useAutoUpdater } from "../composables/useAutoUpdater";
+import { OPEN_UPDATE_MODAL_KEY } from "../composables/useUpdateModal";
 import packageInfo from "../../package.json";
-
-type UpdateModalOpener = () => void;
-
-/**
- * AppShell 提供、外部按钮消费的「打开更新 Modal」函数。
- *
- * 用 InjectionKey + 类型断言保 TS 类型一致。
- */
-const OPEN_UPDATE_MODAL_KEY: InjectionKey<UpdateModalOpener> =
-  Symbol("open-update-modal");
 
 const props = withDefaults(
   defineProps<{
