@@ -10,8 +10,8 @@ import type {
 /**
  * 单条设置项：标签（含描述） + 控件 + 当前/默认值 tag + 重置按钮。
  *
- * 整体强制单行布局（flex-wrap: nowrap），控件用 min-width: 0 允许收缩。
- * 标签和描述放在一行（中间用 · 分隔），长描述用省略号截断。
+ * 基于 antdv `<a-row>` + `<a-col>` + `<a-flex>` 实现单行布局，
+ * 不依赖任何自定义 class。
  */
 defineProps<{
   snap: SettingSnapshot;
@@ -26,31 +26,40 @@ const emit = defineEmits<{
 </script>
 
 <template>
-  <div class="setting-item">
-    <!-- 标签（含描述，单行） -->
-    <div class="setting-item-label" :title="snap.description ?? snap.label">
-      <span class="setting-item-title">{{ snap.label }}</span>
-      <span v-if="snap.description" class="setting-item-desc">
-        · {{ snap.description }}
-      </span>
-    </div>
+  <!--
+    单行设置项：24 栅格分四段。
+    - label: span 5（标签 + 描述，单行截断）
+    - control: span 11（控件，自动收缩）
+    - value tags: span 6（当前值/默认值/已自定义）
+    - reset: span 2（重置按钮）
+  -->
+  <a-row :gutter="12" align="middle" wrap="{false}">
+    <!-- 标签（含描述） -->
+    <a-col :span="5" style="min-width: 0">
+      <a-flex align="baseline" :gap="6" style="min-width: 0">
+        <strong style="white-space: nowrap; flex: 0 0 auto">
+          {{ snap.label }}
+        </strong>
+        <a-typography-text
+          v-if="snap.description"
+          type="secondary"
+          style="
+            font-size: 12px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            min-width: 0;
+          "
+          :title="snap.description"
+        >
+          · {{ snap.description }}
+        </a-typography-text>
+      </a-flex>
+    </a-col>
 
     <!-- 控件 -->
-    <div class="setting-item-control">
-      <template v-if="snap.control.type === 'slider'">
-        <a-slider
-          :value="snap.value as number"
-          :min="snap.control.min"
-          :max="snap.control.max"
-          :step="snap.control.step"
-          @update:value="
-            (v: number | number[]) =>
-              emit('change', snap, Array.isArray(v) ? v[0] : v)
-          "
-        />
-      </template>
-
-      <template v-else-if="snap.control.type === 'toggle'">
+    <a-col :span="11" style="min-width: 0; overflow: hidden">
+      <template v-if="snap.control.type === 'toggle'">
         <a-radio-group
           :value="snap.value as string"
           option-type="button"
@@ -71,9 +80,13 @@ const emit = defineEmits<{
       <template v-else>
         <!--
           checkbox 控件：紧凑单行显示。
-          选项文字 + tooltip 描述；选中态用 primary 颜色高亮。
+          选项文字 + tooltip 描述。
         -->
-        <div class="setting-checkboxes">
+        <a-flex
+          :gap="4"
+          align="center"
+          style="overflow-x: auto; padding: 2px 0"
+        >
           <a-checkbox
             v-for="opt in snap.control.options"
             :key="opt.value"
@@ -85,103 +98,33 @@ const emit = defineEmits<{
           >
             {{ opt.title }}
           </a-checkbox>
-        </div>
+        </a-flex>
       </template>
-    </div>
+    </a-col>
 
-    <!-- 当前值/默认值（固定宽度，不参与换行） -->
-    <div class="setting-item-value">
-      <a-tag color="blue" size="small">当前：{{ snap.display }}</a-tag>
-      <a-tag size="small">默认：{{ snap.defaultDisplay }}</a-tag>
-      <a-tag v-if="!snap.isDefault" color="orange" size="small">
-        已自定义
-      </a-tag>
-    </div>
+    <!-- 当前值/默认值 -->
+    <a-col :span="6">
+      <a-flex :gap="4" align="center" wrap>
+        <a-tag color="blue" size="small">当前：{{ snap.display }}</a-tag>
+        <a-tag size="small">默认：{{ snap.defaultDisplay }}</a-tag>
+        <a-tag v-if="!snap.isDefault" color="orange" size="small">
+          已自定义
+        </a-tag>
+      </a-flex>
+    </a-col>
 
-    <a-button
-      size="small"
-      type="text"
-      :disabled="snap.isDefault"
-      class="setting-item-reset"
-      @click="emit('reset', snap)"
-    >
-      <template #icon>
-        <ReloadOutlined />
-      </template>
-    </a-button>
-  </div>
+    <!-- 重置按钮 -->
+    <a-col :span="2">
+      <a-button
+        size="small"
+        type="text"
+        :disabled="snap.isDefault"
+        @click="emit('reset', snap)"
+      >
+        <template #icon>
+          <ReloadOutlined />
+        </template>
+      </a-button>
+    </a-col>
+  </a-row>
 </template>
-
-<style scoped>
-/*
- * 整行固定单行布局：
- * - 标签：固定 150px 起步，但允许更长（描述长时容器跟着撑）。
- * - 控件：flex: 1，min-width: 0 允许内部收缩。
- * - 数值 tag：固定内容宽度，不换行。
- * - 重置按钮：紧凑尺寸。
- */
-.setting-item {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  flex-wrap: nowrap;
-  min-width: 0;
-}
-
-.setting-item-label {
-  display: flex;
-  align-items: baseline;
-  gap: 6px;
-  flex: 0 1 auto;
-  min-width: 150px;
-  max-width: 320px;
-  overflow: hidden;
-}
-
-.setting-item-title {
-  font-weight: 500;
-  white-space: nowrap;
-  flex: 0 0 auto;
-}
-
-.setting-item-desc {
-  color: var(--app-text-muted);
-  font-size: 12px;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  min-width: 0;
-}
-
-.setting-item-control {
-  flex: 1 1 0;
-  min-width: 0;
-  overflow: hidden;
-}
-
-.setting-item-value {
-  display: flex;
-  align-items: center;
-  gap: 4px;
-  flex: 0 0 auto;
-}
-
-.setting-item-reset {
-  flex: 0 0 auto;
-}
-
-/*
- * checkbox 控件：强制单行 + 紧凑间距。
- * - flex-wrap: nowrap 保证不换行
- * - overflow-x: auto 极端窄时横向滚动
- * - ga-1 让 5 个选项紧凑
- */
-.setting-checkboxes {
-  display: flex;
-  align-items: center;
-  flex-wrap: nowrap;
-  gap: 4px;
-  overflow-x: auto;
-  padding: 2px 0;
-}
-</style>

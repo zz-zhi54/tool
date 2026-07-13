@@ -106,6 +106,10 @@ export const themeStore = {
  * 让响应式 data-theme 同步到 <html> 与 <body> 节点，
  * 并订阅系统主题变化（仅当 name === "system" 时影响 resolved）。
  *
+ * 同时把当前主题的 token（surface / text / border / ...）写入 <html> 的
+ * 内联 CSS 变量，让业务组件用 var(--app-surface) 等读主题色，
+ * 不需要在每个使用点都通过 :style 绑定 themeStore.tokens。
+ *
  * 必须在根组件 (App.vue) 调用一次。
  */
 export function bindSystemTheme() {
@@ -116,6 +120,21 @@ export function bindSystemTheme() {
     document.documentElement.dataset.theme = value;
     // 同步写到 <body>，避免某些嵌入式场景下 <html> 不应用样式。
     document.body.dataset.theme = value;
+  });
+
+  // 把当前主题 token 写入 <html> 的内联 CSS 变量。
+  // 这样所有组件可以直接读 var(--app-surface) / var(--app-text) 等，
+  // 不需要在每个使用点写 :style 绑定 themeStore.tokens.value。
+  watchEffect(() => {
+    if (typeof document === "undefined") return;
+    const t = tokens.value;
+    const root = document.documentElement;
+    root.style.setProperty("--app-surface", t.surface);
+    root.style.setProperty("--app-surface-elevated", t["surface-elevated"]);
+    root.style.setProperty("--app-text", t.text);
+    root.style.setProperty("--app-text-muted", t["text-muted"]);
+    root.style.setProperty("--app-border", t.border);
+    root.style.setProperty("--app-border-strong", t["border-strong"]);
   });
 
   // 监听系统主题变化；同步更新 systemPrefersDarkRef，

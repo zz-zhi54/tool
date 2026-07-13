@@ -1,22 +1,36 @@
 <script setup lang="ts">
+/**
+ * 正则表达式测试器（独立页）。
+ *
+ * 控件行 → 测试字符串输入 → 匹配结果多列网格。
+ *   - 控件行：标题 + /pattern/ + flags + 状态 tag + 复制/清空按钮
+ *   - 测试字符串：固定 180px
+ *   - 匹配结果：多列卡片网格
+ *
+ * flags 默认值持久化到 localStorage（REGEX_FLAGS_KEY），刷新页面保留。
+ *
+ * 完全基于 antdv 组件实现，不使用任何自定义 class 与 inline style。
+ */
 import { computed, ref, watch } from "vue";
 
 import { CopyOutlined, DeleteOutlined } from "@ant-design/icons-vue";
 
-import PanelCard from "../../components/PanelCard.vue";
-import SplitPanel from "../../components/SplitPanel.vue";
 import { showInfo } from "../../composables/useMessage";
 import { testRegex, validateRegex } from "../../tools/regex/regexTester";
-import { load, save, REGEX_FLAGS_KEY, PANEL_KEYS } from "../../utils/storage";
-import type { RegexFlag, RegexFlagsPreference } from "../../utils/storage";
+import {
+  load,
+  save,
+  REGEX_FLAGS_KEY,
+  type RegexFlag,
+  type RegexFlagsPreference,
+} from "../../utils/storage";
 
 const pattern = ref("");
-const testString = ref("");
+const input = ref("");
 const flags = ref<RegexFlagsPreference>(
   load(REGEX_FLAGS_KEY, { g: true, i: false, m: false, s: false, u: false }),
 );
 
-/** 可用的正则标志位 */
 const flagOptions: Array<{ key: RegexFlag; label: string; title: string }> = [
   { key: "g", label: "g", title: "全局匹配" },
   { key: "i", label: "i", title: "忽略大小写" },
@@ -25,9 +39,6 @@ const flagOptions: Array<{ key: RegexFlag; label: string; title: string }> = [
   { key: "u", label: "u", title: "Unicode 模式" },
 ];
 
-/**
- * 当前标志位字符串。
- */
 const activeFlags = computed(() =>
   flagOptions
     .filter((opt) => flags.value[opt.key])
@@ -49,177 +60,56 @@ const validation = computed(() =>
 
 const result = computed(() => {
   if (!pattern.value.trim()) {
-    return { success: true, matches: [] };
+    return {
+      success: true,
+      matches: [] as Array<{ text: string; index: number; groups: string[] }>,
+    };
   }
-
-  return testRegex(pattern.value, activeFlags.value, testString.value);
+  return testRegex(pattern.value, activeFlags.value, input.value);
 });
 
 const matchCount = computed(() => result.value.matches.length);
-
 const hasPattern = computed(() => pattern.value.trim().length > 0);
-const hasTestString = computed(() => testString.value.trim().length > 0);
 
-/**
- * 高亮后的测试字符串 HTML。
- *
- * 将每个匹配区域用带背景色的 span 包裹，方便用户直观看到匹配位置。
- * 使用不同的背景色交替显示，区分相邻匹配。
- */
-const highlightedHtml = computed(() => {
-  if (!result.value.success || result.value.matches.length === 0) {
-    return escapeHtml(testString.value);
-  }
-
-  const text = testString.value;
-  const matches = result.value.matches;
-  const parts: string[] = [];
-  let lastEnd = 0;
-
-  for (const match of matches) {
-    if (match.index > lastEnd) {
-      parts.push(escapeHtml(text.slice(lastEnd, match.index)));
-    }
-
-    parts.push(
-      `<mark style="background:#bbdefb;border-radius:2px;padding:0 1px;color:inherit">${escapeHtml(match.text)}</mark>`,
-    );
-    lastEnd = match.index + match.text.length;
-  }
-
-  if (lastEnd < text.length) {
-    parts.push(escapeHtml(text.slice(lastEnd)));
-  }
-
-  return parts.join("");
-});
-
-function escapeHtml(text: string): string {
-  return text
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;")
-    .replace(/\n/g, "<br>")
-    .replace(/ /g, "&nbsp;");
-}
-
-/**
- * 复制匹配结果。
- */
-async function handleCopyResults() {
-  if (matchCount.value === 0) {
-    return;
-  }
-
+async function handleCopyMatches() {
+  if (matchCount.value === 0) return;
   const text = result.value.matches
     .map(
       (m, i) =>
         `匹配 ${i + 1}: "${m.text}" (位置: ${m.index})${m.groups.length ? `  捕获组: [${m.groups.map((g) => `"${g}"`).join(", ")}]` : ""}`,
     )
     .join("\n");
-
   await navigator.clipboard.writeText(text);
   showInfo("匹配结果已复制");
 }
 
-/**
- * 清空所有输入。
- */
 function handleClear() {
   pattern.value = "";
-  testString.value = "";
+  input.value = "";
   showInfo("已清空");
 }
 </script>
 
 <template>
-  <div
-    class="d-flex flex-column ga-2 h-100"
-    style="min-height: 0; overflow: hidden"
+  <a-flex
+    vertical
+    :gap="8"
+    style="height: 100%; padding: 8px; box-sizing: border-box; min-height: 0"
   >
-    <!-- 顶部工具栏 -->
-    <header
-      class="d-flex align-center ga-1 px-2 py-1"
-      style="
-        flex: 0 0 auto;
-        gap: 4px;
-        border: 1px solid var(--app-border);
-        border-radius: 4px;
-        background-color: var(--app-surface);
-      "
-    >
-      <span class="text-body-2 font-weight-medium">正则测试</span>
+    <!-- 控件行 -->
+    <a-card size="small" :body-style="{ padding: '6px 12px' }">
+      <a-flex align="center" :gap="4" wrap>
+        <strong>正则测试</strong>
 
-      <a-tag
-        :color="
-          validation.valid ? 'green' : validation.empty ? 'default' : 'red'
-        "
-        size="small"
-      >
-        {{
-          validation.valid
-            ? "语法正确"
-            : validation.empty
-              ? "等待输入"
-              : "语法错误"
-        }}
-      </a-tag>
+        <a-typography-text type="secondary">/</a-typography-text>
+        <a-input
+          v-model:value="pattern"
+          placeholder="输入正则表达式"
+          size="small"
+          style="flex: 1 1 120px"
+        />
+        <a-typography-text type="secondary">/</a-typography-text>
 
-      <a-tag v-if="hasPattern && hasTestString" color="blue" size="small">
-        {{ matchCount }} 个匹配
-      </a-tag>
-
-      <span style="flex: 1 1 auto" />
-
-      <a-button
-        size="small"
-        type="primary"
-        ghost
-        :disabled="matchCount === 0"
-        @click="handleCopyResults"
-      >
-        <template #icon>
-          <CopyOutlined />
-        </template>
-        复制结果
-      </a-button>
-
-      <a-button
-        size="small"
-        type="default"
-        ghost
-        :disabled="!hasPattern && !hasTestString"
-        @click="handleClear"
-      >
-        <template #icon>
-          <DeleteOutlined />
-        </template>
-        清空
-      </a-button>
-    </header>
-
-    <!-- 正则输入行 -->
-    <section
-      class="d-flex align-center ga-2 px-3 py-2"
-      style="
-        flex: 0 0 auto;
-        border: 1px solid var(--app-border);
-        border-radius: 4px;
-        background-color: var(--app-surface);
-      "
-    >
-      <span class="text-body-2" style="color: var(--app-text-muted)">/</span>
-      <a-input
-        v-model:value="pattern"
-        placeholder="输入正则表达式"
-        size="small"
-        style="flex: 1 1 auto"
-      />
-      <span class="text-body-2" style="color: var(--app-text-muted)">/</span>
-
-      <!-- 标志位复选框 -->
-      <div class="d-flex ga-1 ml-1" style="margin-left: 8px">
         <a-checkbox
           v-for="opt in flagOptions"
           :key="opt.key"
@@ -231,8 +121,51 @@ function handleClear() {
         >
           {{ opt.label }}
         </a-checkbox>
-      </div>
-    </section>
+
+        <a-tag
+          :color="
+            validation.valid ? 'green' : validation.empty ? 'default' : 'red'
+          "
+          size="small"
+        >
+          {{
+            validation.valid
+              ? matchCount > 0
+                ? `${matchCount} 个匹配`
+                : "语法正确"
+              : validation.empty
+                ? "等待输入"
+                : "语法错误"
+          }}
+        </a-tag>
+
+        <a-flex :flex="'1 1 auto'" />
+
+        <a-button
+          size="small"
+          type="primary"
+          :disabled="matchCount === 0"
+          @click="handleCopyMatches"
+        >
+          <template #icon>
+            <CopyOutlined />
+          </template>
+          复制结果
+        </a-button>
+
+        <a-button
+          size="small"
+          type="default"
+          :disabled="!hasPattern && !input"
+          @click="handleClear"
+        >
+          <template #icon>
+            <DeleteOutlined />
+          </template>
+          清空
+        </a-button>
+      </a-flex>
+    </a-card>
 
     <!-- 语法错误提示 -->
     <a-alert
@@ -242,105 +175,88 @@ function handleClear() {
       show-icon
     />
 
-    <!-- 工作区 -->
-    <SplitPanel :panel-key="PANEL_KEYS.regexTester">
-      <template #left>
-        <PanelCard icon="FileTextOutlined" title="测试字符串">
-          <textarea
-            v-model="testString"
-            class="app-textarea"
-            placeholder="输入需要测试的文本"
-          />
-        </PanelCard>
-      </template>
+    <!-- 测试字符串输入区 -->
+    <a-card size="small" title="测试字符串">
+      <a-textarea
+        v-model:value="input"
+        placeholder="输入需要测试的文本"
+        :auto-size="{ minRows: 5 }"
+      />
+    </a-card>
 
-      <template #right>
-        <PanelCard icon="SearchOutlined" overflow="auto" title="匹配结果">
-          <!-- 高亮预览 -->
-          <section
-            v-if="hasTestString"
-            class="text-body-2 pa-2"
-            style="
-              margin-bottom: 8px;
-              border: 1px solid var(--app-border);
-              border-radius: 4px;
-              white-space: pre-wrap;
-              word-break: break-all;
-              line-height: 1.6;
-              background-color: var(--app-surface);
-            "
-            v-html="highlightedHtml"
-          />
+    <!-- 匹配结果区 -->
+    <a-flex
+      vertical
+      :gap="6"
+      style="flex: 1 1 auto; min-height: 0; overflow: auto"
+    >
+      <a-flex align="center" :gap="6">
+        <strong>匹配结果</strong>
+        <a-tag v-if="result.matches.length > 0" color="blue" size="small">
+          共 {{ matchCount }} 个
+        </a-tag>
+      </a-flex>
 
-          <!-- 匹配列表 -->
-          <template v-if="result.matches.length > 0">
-            <section
-              v-for="(match, idx) in result.matches"
-              :key="idx"
-              class="py-1 px-2 mb-1"
-              style="
-                border: 1px solid var(--app-border);
-                border-radius: 4px;
-                background-color: var(--app-surface);
-              "
+      <a-row v-if="result.matches.length > 0" :gutter="[8, 8]">
+        <a-col
+          v-for="(match, idx) in result.matches"
+          :key="idx"
+          :xs="24"
+          :sm="12"
+          :md="12"
+          :lg="8"
+          :xl="6"
+        >
+          <a-card size="small">
+            <a-flex align="center" :gap="6" style="margin-bottom: 6px">
+              <a-tag color="blue" size="small">#{{ idx + 1 }}</a-tag>
+              <a-typography-text type="secondary">
+                位置 {{ match.index }}–{{ match.index + match.text.length - 1 }}
+              </a-typography-text>
+            </a-flex>
+            <a-descriptions
+              size="small"
+              :column="1"
+              :label-style="{ width: '60px', textAlign: 'right' }"
             >
-              <div class="d-flex align-center ga-1 mb-1">
-                <a-tag color="blue" size="small">#{{ idx + 1 }}</a-tag>
-                <span class="text-caption" style="color: var(--app-text-muted)">
-                  位置 {{ match.index }}–{{
-                    match.index + match.text.length - 1
-                  }}
-                </span>
-              </div>
+              <a-descriptions-item label="匹配">
+                <a-typography-text code copyable style="word-break: break-all">
+                  {{ match.text }}
+                </a-typography-text>
+              </a-descriptions-item>
+              <a-descriptions-item
+                v-for="(group, gIdx) in match.groups"
+                :key="gIdx"
+                :label="`组 ${gIdx + 1}`"
+              >
+                <a-typography-text code copyable style="word-break: break-all">
+                  {{ group ?? "(未匹配)" }}
+                </a-typography-text>
+              </a-descriptions-item>
+            </a-descriptions>
+          </a-card>
+        </a-col>
+      </a-row>
 
-              <div class="text-body-2" style="word-break: break-all">
-                <span class="text-caption" style="color: var(--app-text-muted)">
-                  匹配：
-                </span>
-                <code class="ml-1">{{ match.text }}</code>
-              </div>
+      <a-empty
+        v-else-if="hasPattern && input"
+        description="没有找到匹配项。"
+        :image="undefined"
+      >
+        <template #image>
+          <span />
+        </template>
+      </a-empty>
 
-              <div v-if="match.groups.length > 0" class="mt-1">
-                <div
-                  v-for="(group, gIdx) in match.groups"
-                  :key="gIdx"
-                  class="text-body-2"
-                  style="word-break: break-all"
-                >
-                  <span
-                    class="text-caption"
-                    style="color: var(--app-text-muted)"
-                  >
-                    组 {{ gIdx + 1 }}：
-                  </span>
-                  <code class="ml-1">{{ group ?? "(未匹配)" }}</code>
-                </div>
-              </div>
-            </section>
-          </template>
-
-          <!-- 无匹配时的提示 -->
-          <a-empty
-            v-else-if="hasPattern && hasTestString && result.success"
-            description="没有找到匹配项。"
-            :image="undefined"
-          >
-            <template #image>
-              <span />
-            </template>
-          </a-empty>
-
-          <a-empty
-            v-else-if="!hasPattern"
-            description="输入正则表达式和测试字符串，结果会实时显示。"
-            :image="undefined"
-          >
-            <template #image>
-              <span />
-            </template>
-          </a-empty>
-        </PanelCard>
-      </template>
-    </SplitPanel>
-  </div>
+      <a-empty
+        v-else
+        description="输入正则与测试字符串后，结果会显示在这里。"
+        :image="undefined"
+      >
+        <template #image>
+          <span />
+        </template>
+      </a-empty>
+    </a-flex>
+  </a-flex>
 </template>

@@ -36,9 +36,14 @@ function hasTauriIpc(): boolean {
   );
 }
 
-export function bindWindowDrag(el: HTMLElement): () => void {
+export function bindWindowDrag(el: Element | null): () => void {
   if (!hasTauriIpc()) {
     // 非 Tauri 环境直接放弃接管，避免把上层 mounted hook 拖崩。
+    return () => {};
+  }
+
+  if (!(el instanceof HTMLElement)) {
+    // 组件实例 ref 传进来时不会触发这里，但留个守卫避免误用。
     return () => {};
   }
 

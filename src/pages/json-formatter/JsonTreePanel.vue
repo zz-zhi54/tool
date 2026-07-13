@@ -1,8 +1,9 @@
 <script setup lang="ts">
 import { computed, nextTick, ref, useTemplateRef, watch } from "vue";
 
-import { ApartmentOutlined, SearchOutlined } from "@ant-design/icons-vue";
+import { SearchOutlined } from "@ant-design/icons-vue";
 
+import OutputPanel from "../../components/OutputPanel.vue";
 import type { JsonValue } from "../../tools/json/jsonTypes";
 
 interface JsonTreeNode {
@@ -53,9 +54,6 @@ const treeItems = computed<JsonTreeNode[]>(() => {
     .filter((node): node is JsonTreeNode => node !== undefined);
 });
 
-/**
- * JSON 结构变化或搜索关键字变化时默认展开树节点。
- */
 watch(
   () => [props.value, searchQuery.value],
   () => {
@@ -64,9 +62,6 @@ watch(
   { immediate: true },
 );
 
-/**
- * 根据 JSON 值创建树节点。
- */
 function createTreeNode(
   value: JsonValue,
   label: string,
@@ -77,15 +72,14 @@ function createTreeNode(
       id: path,
       label,
       type: `Array(${value.length})`,
-      children: value.map((item, index) =>
-        createTreeNode(item, `[${index}]`, `${path}.${index}`),
+      children: value.map((child, index) =>
+        createTreeNode(child, String(index), `${path}[${index}]`),
       ),
     };
   }
 
   if (isJsonObject(value)) {
     const entries = Object.entries(value);
-
     return {
       id: path,
       label,
@@ -184,37 +178,13 @@ function collectExpandableIds(nodes: JsonTreeNode[]): string[] {
 </script>
 
 <template>
-  <section
-    class="d-flex flex-column"
-    style="
-      height: 100%;
-      min-height: 0;
-      overflow: hidden;
-      border: 1px solid var(--app-border);
-      border-radius: 4px;
-      background-color: var(--app-surface);
-    "
-  >
-    <header
-      class="d-flex align-center text-body-2 font-weight-medium px-2 py-1"
-      style="
-        flex: 0 0 auto;
-        gap: 4px;
-        border-bottom: 1px solid var(--app-border);
-      "
-    >
-      <ApartmentOutlined
-        style="font-size: 14px; color: var(--app-text-muted)"
-      />
-      结构视图
-      <span style="flex: 1 1 auto" />
-
+  <OutputPanel icon="ApartmentOutlined" title="结构视图">
+    <template #actions>
       <a-button size="small" type="text" @click.stop="toggleSearch">
         <template #icon>
           <SearchOutlined />
         </template>
       </a-button>
-
       <a-space :size="4">
         <a-button size="small" type="default" @click.stop="expandAll">
           展开
@@ -223,55 +193,49 @@ function collectExpandableIds(nodes: JsonTreeNode[]): string[] {
           折叠
         </a-button>
       </a-space>
-    </header>
+    </template>
 
-    <div
+    <a-input
       v-if="searchVisible"
-      class="px-2 py-1"
-      style="flex: 0 0 auto; border-bottom: 1px solid var(--app-border)"
+      ref="searchField"
+      v-model:value="searchQuery"
+      allow-clear
+      placeholder="搜索字段或值"
+      size="small"
+    />
+
+    <a-empty
+      v-if="treeItems.length === 0"
+      description="粘贴合法 JSON 后，结构视图会自动生成并默认展开。"
+      :image="undefined"
     >
-      <a-input
-        ref="searchField"
-        v-model:value="searchQuery"
-        allow-clear
-        placeholder="搜索字段或值"
-        size="small"
-      />
-    </div>
+      <template #image>
+        <span />
+      </template>
+    </a-empty>
 
-    <div class="pa-2" style="flex: 1; min-height: 0; overflow: auto">
-      <a-empty
-        v-if="treeItems.length === 0"
-        description="粘贴合法 JSON 后，结构视图会自动生成并默认展开。"
-        :image="undefined"
-      >
-        <template #image>
-          <span />
-        </template>
-      </a-empty>
-
-      <a-tree
-        v-else
-        v-model:expanded-keys="expandedKeys"
-        :tree-data="treeItems"
-        :field-names="{ key: 'id', title: 'label', children: 'children' }"
-        :block-node="true"
-        :selectable="false"
-        :show-line="false"
-        :virtual="false"
-      >
-        <template #title="{ label, type, value }">
-          <span class="text-body-2 font-weight-medium">{{ label }}</span>
-          <a-tag class="ml-1" size="small">{{ type }}</a-tag>
-          <span
-            v-if="value"
-            class="ml-1 text-caption"
-            style="color: var(--app-text-muted)"
-          >
-            {{ value }}
-          </span>
-        </template>
-      </a-tree>
-    </div>
-  </section>
+    <a-tree
+      v-else
+      v-model:expanded-keys="expandedKeys"
+      :tree-data="treeItems"
+      :field-names="{ key: 'id', title: 'label', children: 'children' }"
+      :block-node="true"
+      :selectable="false"
+      :show-line="false"
+      :virtual="false"
+      style="overflow: auto; flex: 1 1 auto; min-height: 0"
+    >
+      <template #title="{ label, type, value }">
+        <strong>{{ label }}</strong>
+        <a-tag style="margin-left: 4px" size="small">{{ type }}</a-tag>
+        <a-typography-text
+          v-if="value"
+          type="secondary"
+          style="margin-left: 4px"
+        >
+          {{ value }}
+        </a-typography-text>
+      </template>
+    </a-tree>
+  </OutputPanel>
 </template>

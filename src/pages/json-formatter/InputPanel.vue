@@ -2,27 +2,40 @@
 import { nextTick, ref, useTemplateRef } from "vue";
 
 import {
-  FileTextOutlined,
   LeftOutlined,
   RightOutlined,
   SearchOutlined,
 } from "@ant-design/icons-vue";
 
+import PanelCard from "../../components/PanelCard.vue";
+
 /**
- * 输入面板：标题栏 + 搜索 + 文本框。
+ * JSON 输入面板：标题栏 + 搜索 + 文本框。
  *
- * 通过 v-model 双向绑定文本内容，搜索通过 setSelectionRange 定位匹配项。
+ * 通过 v-model 双向绑定文本内容，搜索通过原生 textarea API 定位匹配项。
  */
 const model = defineModel<string>({ default: "" });
 
 const searchQuery = ref("");
 const searchVisible = ref(false);
 const searchFieldRef = useTemplateRef<HTMLInputElement>("searchField");
-const textareaRef = useTemplateRef<HTMLTextAreaElement>("textarea");
+const textareaRef = useTemplateRef("textarea");
 
 /**
- * 切换搜索框可见性。
+ * 从 antdv `<a-textarea>` 实例拿到底层 DOM 元素。
+ *
+ * antdv 的 ATextarea 外层有 affix wrapper / ResizableTextArea / BaseInput 三层，
+ * 内部 ref 类型不便直接引用，最稳的做法是从 expose 的 resizableTextArea.textArea 一路 unwrap。
  */
+function getNativeTextarea(): HTMLTextAreaElement | null {
+  const wrapper = (
+    textareaRef.value as unknown as {
+      resizableTextArea?: { textArea?: { value?: HTMLTextAreaElement } };
+    } | null
+  )?.resizableTextArea;
+  return wrapper?.textArea?.value ?? null;
+}
+
 async function toggleSearch() {
   if (searchVisible.value) {
     searchQuery.value = "";
@@ -35,11 +48,8 @@ async function toggleSearch() {
   searchFieldRef.value?.focus();
 }
 
-/**
- * 在 textarea 中定位并选中下一个匹配项，并滚动到可见区域。
- */
 function findNext() {
-  const el = textareaRef.value;
+  const el = getNativeTextarea();
   const keyword = searchQuery.value.trim();
   if (!el || !keyword) return;
 
@@ -53,11 +63,8 @@ function findNext() {
   selectAndScroll(el, index, keyword.length);
 }
 
-/**
- * 在 textarea 中定位并选中上一个匹配项，并滚动到可见区域。
- */
 function findPrevious() {
-  const el = textareaRef.value;
+  const el = getNativeTextarea();
   const keyword = searchQuery.value.trim();
   if (!el || !keyword) return;
 
@@ -72,9 +79,6 @@ function findPrevious() {
   selectAndScroll(el, index, keyword.length);
 }
 
-/**
- * 选中指定范围并滚动到可视区域。
- */
 function selectAndScroll(
   el: HTMLTextAreaElement,
   start: number,
@@ -97,70 +101,47 @@ function selectAndScroll(
 </script>
 
 <template>
-  <section
-    class="d-flex flex-column"
-    style="
-      height: 100%;
-      min-height: 0;
-      overflow: hidden;
-      border: 1px solid var(--app-border);
-      border-radius: 4px;
-      background-color: var(--app-surface);
-    "
-  >
-    <header
-      class="d-flex align-center text-body-2 font-weight-medium px-2 py-1"
-      style="
-        flex: 0 0 auto;
-        gap: 4px;
-        border-bottom: 1px solid var(--app-border);
-      "
-    >
-      <FileTextOutlined style="font-size: 14px; color: var(--app-text-muted)" />
-      输入 JSON
-      <span style="flex: 1 1 auto" />
+  <PanelCard icon="FileTextOutlined" title="输入 JSON">
+    <template #actions>
       <a-button size="small" type="text" @click.stop="toggleSearch">
         <template #icon>
           <SearchOutlined />
         </template>
       </a-button>
-    </header>
+    </template>
 
-    <!-- 搜索栏 -->
-    <div
+    <a-flex
       v-if="searchVisible"
-      class="px-2 py-1"
-      style="flex: 0 0 auto; border-bottom: 1px solid var(--app-border)"
+      align="center"
+      :gap="4"
+      style="margin-bottom: 8px"
     >
-      <div class="d-flex align-center ga-1" style="margin: 0">
-        <a-input
-          ref="searchField"
-          v-model:value="searchQuery"
-          allow-clear
-          placeholder="搜索文本"
-          size="small"
-          @keydown.enter.prevent="findNext"
-        />
-        <a-button size="small" type="text" @click.stop="findPrevious">
-          <template #icon>
-            <LeftOutlined />
-          </template>
-        </a-button>
-        <a-button size="small" type="text" @click.stop="findNext">
-          <template #icon>
-            <RightOutlined />
-          </template>
-        </a-button>
-      </div>
-    </div>
-
-    <div class="pa-2" style="flex: 1; min-height: 0; overflow: hidden">
-      <textarea
-        ref="textarea"
-        v-model="model"
-        class="app-textarea"
-        placeholder='粘贴需要处理的 JSON，例如：{ "name": "tool" }'
+      <a-input
+        ref="searchField"
+        v-model:value="searchQuery"
+        allow-clear
+        placeholder="搜索文本"
+        size="small"
+        @keydown.enter.prevent="findNext"
       />
-    </div>
-  </section>
+      <a-button size="small" type="text" @click.stop="findPrevious">
+        <template #icon>
+          <LeftOutlined />
+        </template>
+      </a-button>
+      <a-button size="small" type="text" @click.stop="findNext">
+        <template #icon>
+          <RightOutlined />
+        </template>
+      </a-button>
+    </a-flex>
+
+    <a-textarea
+      ref="textarea"
+      v-model:value="model"
+      :allow-clear="false"
+      placeholder='粘贴需要处理的 JSON，例如：{ "name": "tool" }'
+      style="flex: 1 1 auto; min-height: 0"
+    />
+  </PanelCard>
 </template>

@@ -1,92 +1,39 @@
 <script setup lang="ts">
 import { onBeforeUnmount, onMounted, ref } from "vue";
 
-import type { ToolDefinition } from "../types/tool";
-import { useAppTheme } from "../composables/useAppTheme";
 import { bindWindowDrag } from "../composables/useWindowDrag";
+import { showDragBar } from "../utils/platform";
 
-const props = defineProps<{
-  currentTool: ToolDefinition;
-}>();
-
-// ── 主题 store（仍需要，但 UI 已搬到 AppNavigation） ─────
-
-const themeStore = useAppTheme();
-
-// ── 窗口 drag 绑定 ───────────────────────────────────────
-
+/**
+ * 工具窗口顶部 drag bar。
+ *
+ * 仅 macOS 渲染（Tauri titleBarStyle: Overlay 让 web 内容延伸到原生标题栏下方，
+ * 红绿灯浮在 web 内容上，需要让位区）。Windows / Linux 由 OS 原生标题栏负责
+ * 拖动 + 关闭按钮，浏览器没有红绿灯——都不需要这块占位。
+ *
+ * 工具标题不在这里显示——侧边栏已展示当前工具的 icon + name，顶部重复一次
+ * 没有信息量（参考 cc-switch 的极简顶部）。
+ *
+ * 视觉（28px 高度 + 主题背景色 + flex-shrink: 0 防止被 flex 父级压缩）
+ * 由 inline style 表达：属于 antdv 没有 prop 的尺寸约束，是必要例外。
+ */
 const dragBarEl = ref<HTMLElement | null>(null);
-const contentHeaderEl = ref<HTMLElement | null>(null);
-let unbindA: (() => void) | null = null;
-let unbindB: (() => void) | null = null;
+let unbind: (() => void) | null = null;
 
 onMounted(() => {
-  if (dragBarEl.value) unbindA = bindWindowDrag(dragBarEl.value);
-  if (contentHeaderEl.value) unbindB = bindWindowDrag(contentHeaderEl.value);
+  if (dragBarEl.value) unbind = bindWindowDrag(dragBarEl.value);
 });
 
 onBeforeUnmount(() => {
-  unbindA?.();
-  unbindB?.();
-});
-
-// ── 样式 ─────────────────────────────────────────────────
-
-const DRAG_BAR_HEIGHT = 28;
-
-const dragBarStyle = () => ({
-  height: DRAG_BAR_HEIGHT + "px",
-  backgroundColor: themeStore.tokens.value.surface,
-});
-
-const headerStyle = () => ({
-  backgroundColor: themeStore.tokens.value.surface,
-  color: themeStore.tokens.value.text,
-  borderBottom: "1px solid " + themeStore.tokens.value.border,
-  padding: "4px 12px",
+  unbind?.();
 });
 </script>
 
 <template>
-  <!--
-    顶层 28px drag bar：
-    - macOS：让位红绿灯（traffic lights 浮在 drag bar 区域上）
-    - 其他：也保留为拖动区
-  -->
   <header
+    v-if="showDragBar()"
     ref="dragBarEl"
-    :style="dragBarStyle()"
     data-tauri-drag-region
-    class="titlebar-drag-bar"
+    style="height: 28px; flex-shrink: 0; background: var(--app-surface)"
   />
-
-  <!--
-    主 header：只显示当前工具标题。
-    「本地处理」tag 已移除（桌面端 Tauri 应用一切都是本地处理，纯冗余）。
-    「主题」按钮已搬到 AppNavigation，与「设置」按钮同一行。
-  -->
-  <header
-    ref="contentHeaderEl"
-    :style="headerStyle()"
-    data-tauri-drag-region
-    class="titlebar-header"
-  >
-    <span class="font-weight-medium">{{ props.currentTool.title }}</span>
-  </header>
 </template>
-
-<style scoped>
-.titlebar-drag-bar {
-  flex: 0 0 auto;
-  width: 100%;
-}
-
-.titlebar-header {
-  flex: 0 0 auto;
-  display: flex;
-  align-items: center;
-  font-size: 14px;
-  font-weight: 500;
-  cursor: default;
-}
-</style>

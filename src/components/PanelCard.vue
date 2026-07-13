@@ -7,7 +7,11 @@ import { getIconByName } from "../utils/icons";
  * 统一工具页面中左右面板的卡片结构：
  * 标题栏（图标 + 文字 + 可选操作区）+ 分隔线 + 内容区。
  *
- * 用于 base64-codec、sql-generator、regex-tester 等使用固定分栏的工具页面。
+ * 基于 antdv `<a-card>` 实现：边框/背景/圆角/header/body 全部由框架处理。
+ * - `compact: false`：占满父级高度（默认），内容区垂直 flex 布局
+ * - `compact: true`：高度由内容驱动，适用于"输入框只需要几行"的场景
+ *
+ * 用于 sql-generator、regex-tester、time-hub 等使用固定分栏的工具页面。
  * JSON/YAML 格式化的子组件（InputPanel、JsonTreePanel 等）自带卡片壳，不需要此组件。
  */
 withDefaults(
@@ -18,48 +22,67 @@ withDefaults(
     icon?: string;
     /** 内容区 overflow 行为，默认 hidden */
     overflow?: "hidden" | "auto";
+    /**
+     * 紧凑模式：根容器不再铺满父级高度，改由内容驱动，
+     * 适用于"输入框只需要几行"的场景（如正则/转义/大小写）。
+     * 默认 false（占满父级高度）。
+     */
+    compact?: boolean;
   }>(),
   {
     icon: "FileTextOutlined",
     overflow: "hidden",
+    compact: false,
   },
 );
 </script>
 
 <template>
-  <section
-    class="d-flex flex-column"
-    style="
-      height: 100%;
-      min-height: 0;
-      overflow: hidden;
-      border: 1px solid var(--app-border);
-      border-radius: 4px;
-      background-color: var(--app-surface);
+  <!--
+    compact 控制根节点高度：false 时撑满父级，true 时由内容驱动。
+    这是 antdv 组件不直接支持的根容器高度语义，只能用 inline style 表达。
+  -->
+  <a-card
+    size="small"
+    :body-style="
+      compact
+        ? { padding: '8px', display: 'flex', flexDirection: 'column', overflow }
+        : {
+            padding: '8px',
+            flex: '1 1 auto',
+            minHeight: 0,
+            display: 'flex',
+            flexDirection: 'column',
+            overflow,
+          }
+    "
+    :style="
+      compact
+        ? undefined
+        : {
+            height: '100%',
+            display: 'flex',
+            flexDirection: 'column',
+            minHeight: 0,
+          }
     "
   >
-    <header
-      class="d-flex align-center text-body-2 font-weight-medium px-2 py-1"
-      style="
-        flex: 0 0 auto;
-        gap: 4px;
-        border-bottom: 1px solid var(--app-border);
-      "
-    >
-      <component
-        :is="getIconByName(icon)"
-        v-if="icon"
-        style="font-size: 14px; color: var(--app-text-muted)"
-      />
-      {{ title }}
-      <!-- 占位替代 v-spacer -->
-      <span style="flex: 1 1 auto" />
-      <!-- 标题栏右侧操作区（搜索按钮等） -->
+    <!--
+      header 模板：用 #title 插槽自定义标题栏内容，
+      图标 + 标题 + 占位 + actions 由 antdv 框架统一渲染（自动处理底部 border）。
+    -->
+    <template #title>
+      <a-flex align="center" :gap="4" style="flex: 1 1 auto; min-width: 0">
+        <component :is="getIconByName(icon)" v-if="icon" />
+        <span>{{ title }}</span>
+      </a-flex>
+    </template>
+    <template #extra>
       <slot name="actions" />
-    </header>
+    </template>
 
-    <div class="pa-2" :style="{ flex: 1, minHeight: 0, overflow }">
+    <a-flex vertical :gap="8" style="height: 100%; min-height: 0">
       <slot />
-    </div>
-  </section>
+    </a-flex>
+  </a-card>
 </template>
