@@ -1,28 +1,30 @@
 <script setup lang="ts">
-import { computed, ref } from "vue";
+import { computed, ref, watch } from "vue";
 import { CloudDownloadOutlined, RocketOutlined } from "@ant-design/icons-vue";
 
 import { useAutoUpdater } from "../composables/useAutoUpdater";
 import { showError } from "../composables/useMessage";
+import { isTauri } from "@tauri-apps/api/core";
 import packageInfo from "../../package.json";
 
 const open = ref(false);
 const appVersion = packageInfo.version;
 
-const {
-  status,
-  info,
-  progress,
-  error,
-  runUpdateFlow,
-  checkOnly,
-  relaunch,
-} = useAutoUpdater();
+const { status, info, progress, error, runUpdateFlow, relaunch, reset } =
+  useAutoUpdater();
 
 /**
- * 允许关闭 Modal 的状态：空闲 / 已是最新 / 失败。
- * 检查中 / 发现新版本 / 下载中 / 下载完成 / 重启中 时点遮罩/关闭键/ESC 都无效，
- * 避免误操作打断下载或安装流程。
+ * 允许关闭 Modal 的状态：空闲 / 已是最新 / 失败 / 下载完成（待重启）。
+ * 检查中 / 发现新版本 / 下载中 / 重启中 锁住 modal。
+ *
+ * 设计（与 useUpdateNotification 配套）：
+ * - 通知里的「立即下载」会带 `goDownload=true` 打开 modal → 走 runUpdateFlow。
+ * - 通知里不显示下载中状态 —— modal 出现时下载已经在跑。
+ * - 用户在「下载中」看到 modal 是「后台下载 + 锁屏」而不是「卡死」：
+ *   进度条持续更新、界面无法操作（官方 updater 行为：下载中无可取消句柄）。
+ * - 官方边界（@tauri-apps/plugin-updater 2.10.1）：
+ *   check / downloadAndInstall / relaunch 都没有 cancel / abort 句柄；
+ *   这里锁 modal 不是为了避免 race，而是把「下载确实在跑」明示给用户。
  */
 const canClose = computed(
   () =>
@@ -32,11 +34,6 @@ const canClose = computed(
     status.value === "error",
 );
 
-/**
- * "立即下载"按钮是否处于 loading 状态。
- * 用 ref 包一层避免在 v-else-if="status === 'available'" 块内
- * 直接比较 status === 'downloading' 触发 TS2367（类型已收窄）。
- */
 const isDownloading = computed(() => status.value === "downloading");
 
 function describeError(err: { stage: string; cause: unknown }): string {
@@ -59,22 +56,41 @@ function describeError(err: { stage: string; cause: unknown }): string {
 }
 
 /**
- * 主动打开 Modal 的入口。
+ * 外部入口。
  *
- * 由 chrome 上的"更新"按钮（侧边栏 / 顶部导航）通过 inject 拿到本组件 ref 后调用。
+ * - `open()` 不带参 / `goDownload=false`：仅打开 modal 用于查看 ready / 错误。
+ * - `open(true)`：从通知的「立即下载」进入，先 reset 再走 runUpdateFlow。
  *
- * 行为：reset → 打开 Modal → 立刻跑一次 checkOnly —— 进入 Modal 后用户看到
- * 的是真实的检查进度，而不是停在 "idle" 分支的"正在检查更新…"占位文案
- * （之前 openModal 不调检查，所以点按钮后 Modal 永远显示 idle 文案，看似卡死）。
- *
- * 如果发现新版本，status 走 available 分支，用户点"立即下载"才进入下载/安装。
+ * 检查（checkOnly）由 useUpdateNotification 触发，本组件不再做。
  */
-async function openModal() {
+async function openModal(goDownload = false) {
+  if (!goDownload) {
+    open.value = true;
+    return;
+  }
+
+  // 非 Tauri 环境下不应该到这里（通知也只在 Tauri 内有意义），但守住兜底。
+  if (!isTauri()) {
+    showError("自动更新仅在桌面端可用");
+    return;
+  }
+
+  // 仅在「空闲 / 错误」态下从下载入口走完整 runUpdateFlow；
+  // available / downloading / ready 阶段说明通知已经把状态推到正确位置，
+  // 直接开 modal 让用户看到当前进度。
+  if (status.value === "idle" || status.value === "error") {
+    reset();
+    open.value = true;
+    status.value = "checking";
+    // runUpdateFlow 内部会重新 check + download，过程中 modal 显示检查/下载阶段。
+    const final = await runUpdateFlow();
+    if (final === "error" && error.value) {
+      showError(describeError(error.value));
+    }
+    return;
+  }
+
   open.value = true;
-  // 提前设 checking，确保 waitForSilentlyIdle() 等待期间 Modal 也有转圈，
-  // 而不是停在 idle 分支的"正在检查更新…"无反馈文字上。
-  status.value = "checking";
-  await checkOnly();
 }
 defineExpose({ open: openModal });
 
@@ -91,6 +107,17 @@ async function onRelaunch() {
     showError(describeError(error.value));
   }
 }
+
+/**
+ * ready 阶段关闭 modal 后允许重新点 sidebar 触发新一轮检查；
+ * 这里监听 status 变化把 modal 同步为「关闭」即可，不需要再调 reset —— reset
+ * 会清掉 info，导致 sidebar 失去版本号显示。
+ */
+watch(status, (s) => {
+  if (s === "idle" || s === "up-to-date" || s === "error") {
+    // 不主动关 modal —— 让用户自己点「好的 / 关闭」。
+  }
+});
 </script>
 
 <template>
@@ -102,7 +129,7 @@ async function onRelaunch() {
     :keyboard="canClose"
     width="420px"
   >
-    <!-- 初始 / 检查中 -->
+    <!-- 初始 / 检查中：modal 出现说明是走 open(true) 的下载路径 -->
     <a-flex
       v-if="status === 'idle' || status === 'checking'"
       vertical
@@ -129,15 +156,11 @@ async function onRelaunch() {
       <a-button type="primary" @click="open = false">好的</a-button>
     </a-flex>
 
-    <!-- 发现新版本 -->
+    <!-- 发现新版本：modal 不会主动走到这里（通知先拦截），但保留兜底 -->
     <a-flex v-else-if="status === 'available'" vertical :gap="12">
       <span>
         发现新版本 <strong>v{{ info?.version }}</strong>
       </span>
-      <!--
-        版本说明容器：高度约束 (max-height) 是必要的滚动行为，
-        保留 inline style。
-      -->
       <a-alert
         v-if="info?.notes"
         type="info"
@@ -181,8 +204,7 @@ async function onRelaunch() {
       </a-flex>
     </a-flex>
 
-    <!-- 重启中：成功调用 relaunch() 后到进程真正退出之间的窗口。
-         锁定 Modal，避免用户以为"卡住"再去点。 -->
+    <!-- 重启中 -->
     <a-flex
       v-else-if="status === 'relaunching'"
       vertical

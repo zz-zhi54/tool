@@ -8,8 +8,9 @@
  * - up-to-date → 绿色 + 对勾图标，标识「运行在最新版本」
  * - 其他状态   → 灰色 + 下载图标（默认）
  *
- * 点击行为：始终打开共享 Modal（由 AppShell 通过 inject 提供打开函数）。
- * 这样把"流程是否要立刻跑"统一交给 Modal 内部根据 status 决定。
+ * 点击行为：触发 `triggerCheck()`，**不**直接弹模态。
+ * 检查阶段用 antdv notification 通知完成，下载阶段才弹模态（由通知的
+ * 「立即下载」按钮回调打开），符合「检查不阻塞、下载可锁屏」的官方语义。
  */
 
 import { computed, inject } from "vue";
@@ -20,7 +21,11 @@ import {
 } from "@ant-design/icons-vue";
 
 import { useAutoUpdater } from "../composables/useAutoUpdater";
-import { OPEN_UPDATE_MODAL_KEY } from "../composables/useUpdateModal";
+import {
+  OPEN_UPDATE_MODAL_KEY,
+  type OpenUpdateModalFn,
+} from "../composables/useUpdateModal";
+import { useUpdateNotification } from "../composables/useUpdateNotification";
 import packageInfo from "../../package.json";
 
 const props = withDefaults(
@@ -32,13 +37,16 @@ const props = withDefaults(
 );
 
 const { status, info, hasUpdate: remoteHasUpdate } = useAutoUpdater();
+const { triggerCheck } = useUpdateNotification();
+const openModal = inject(
+  OPEN_UPDATE_MODAL_KEY,
+  null,
+) as OpenUpdateModalFn | null;
 const appVersion = packageInfo.version;
 
 /**
  * 是否有更新：优先看用户主动检查后的 status（精确，包含版本号），
  * 否则看后台静默检查的红点标志（粗略，只知道"有/没有"）。
- *
- * 主动检查能拿到版本号用于文案；后台检查只能告诉 sidebar 该不该显示红点。
  */
 const isAvailable = computed(() => status.value === "available");
 const newVersion = computed(() => info.value?.version ?? "");
@@ -48,36 +56,16 @@ const isDownloading = computed(() => status.value === "downloading");
 const isReady = computed(() => status.value === "ready");
 const isError = computed(() => status.value === "error");
 
-/**
- * 是否显示红点 + 升级样式（"有可用更新"）。
- *
- * - isAvailable（用户主动检查拿到 update）：有精确版本号，强提示
- * - remoteHasUpdate（后台静默检查拿到的红点）：只知道"有"，弱提示
- *
- * 这里只看"是否值得点"；按钮文案和危险样式走更细的判断。
- */
-const showDot = computed(
-  () => isAvailable.value || remoteHasUpdate.value,
-);
+const showDot = computed(() => isAvailable.value || remoteHasUpdate.value);
 
 /** 升级样式：仅在 isAvailable（拿到精确版本号）时启用。 */
 const isUpgrade = computed(() => isAvailable.value);
 
-/** 状态对应按钮 type（颜色由 antdv 框架主题控制）。 */
 const buttonType = computed<"primary" | "default" | "text">(() => {
   if (isUpgrade.value) return "primary";
   return "text";
 });
 
-/**
- * 按钮文本：根据是否有新版本显示不同文案。
- *
- * - 用户已 check 过、available：「升级 v新」
- * - 后台静默拿到红点（不知道版本号）：「更新 · v当前」
- * - 已是最新（up-to-date）：「已是最新 · v当前」
- * - 检查中（checking）：「检查更新…」+ loading 由模板渲染
- * - 其他：兜底「更新 · v当前」
- */
 const label = computed(() => {
   if (isUpgrade.value && newVersion.value) {
     return `升级 v${newVersion.value}`;
@@ -122,21 +110,26 @@ const tooltip = computed(() => {
   return `检查 v${appVersion} 是否有更新`;
 });
 
-const openModal = inject(OPEN_UPDATE_MODAL_KEY, null);
-
+/**
+ * 点击行为：仅触发检查，下载留给通知的「立即下载」按钮。
+ *
+ * modal 在 available 阶段仍可能未打开（用户点「稍后」），所以这里也提供一个
+ * fallback：如果 status 已经是 available/downloading/ready 等「已知结果」，
+ * 直接打开 modal 而不是再查一次（避免触发 useAutoUpdater 里 runUpdateFlow
+ * 的二次 reset）。
+ */
 function onClick() {
-  openModal?.();
+  if (openModal) {
+    void triggerCheck(() => openModal());
+  } else {
+    // 没有 modal 注入时（如单测）只跑检查；通知由 triggerCheck 内部处理。
+    void triggerCheck(async () => {});
+  }
 }
 </script>
 
 <template>
   <a-tooltip :title="tooltip" placement="right">
-    <!--
-      a-badge 渲染为 <span>，默认 display:inline-block 让 sidebar
-      底部三个按钮宽度不一致（更新 115 vs 主题/设置 152）。
-      给 wrapper 加 display:block + width:100% 让按钮占满 sidebar 宽度，
-      跟主题 / 设置按钮对齐。
-    -->
     <a-badge
       :dot="showDot"
       :offset="[-2, 2]"
