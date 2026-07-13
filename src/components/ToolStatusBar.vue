@@ -1,54 +1,39 @@
 <script setup lang="ts">
 import { onBeforeUnmount, onMounted, ref } from "vue";
 
-import type { ToolDefinition } from "../types/tool";
 import { bindWindowDrag } from "../composables/useWindowDrag";
+import { showDragBar } from "../utils/platform";
 
 /**
- * 工具窗口顶部双层结构：
- * 1) 28px drag bar —— 让位给 macOS 红绿灯 + 整窗口拖动
- * 2) 内容 header —— 显示当前工具标题
+ * 工具窗口顶部 drag bar。
  *
- * 两个块级 <header> 自然上下排列；必要的高度 / 内边距 / 底分隔线
- * 通过 inline style 设置（antdv 组件没有 prop 直接表达这些结构性视觉）。
+ * 仅 macOS 渲染（Tauri titleBarStyle: Overlay 让 web 内容延伸到原生标题栏下方，
+ * 红绿灯浮在 web 内容上，需要让位区）。Windows / Linux 由 OS 原生标题栏负责
+ * 拖动 + 关闭按钮，浏览器没有红绿灯——都不需要这块占位。
+ *
+ * 工具标题不在这里显示——侧边栏已展示当前工具的 icon + name，顶部重复一次
+ * 没有信息量（参考 cc-switch 的极简顶部）。
+ *
+ * 视觉（28px 高度 + 主题背景色 + flex-shrink: 0 防止被 flex 父级压缩）
+ * 由 inline style 表达：属于 antdv 没有 prop 的尺寸约束，是必要例外。
  */
-defineProps<{
-  currentTool: ToolDefinition;
-}>();
-
 const dragBarEl = ref<HTMLElement | null>(null);
-const contentHeaderEl = ref<HTMLElement | null>(null);
-let unbindA: (() => void) | null = null;
-let unbindB: (() => void) | null = null;
+let unbind: (() => void) | null = null;
 
 onMounted(() => {
-  if (dragBarEl.value) unbindA = bindWindowDrag(dragBarEl.value);
-  if (contentHeaderEl.value) unbindB = bindWindowDrag(contentHeaderEl.value);
+  if (dragBarEl.value) unbind = bindWindowDrag(dragBarEl.value);
 });
 
 onBeforeUnmount(() => {
-  unbindA?.();
-  unbindB?.();
+  unbind?.();
 });
 </script>
 
 <template>
-  <header ref="dragBarEl" data-tauri-drag-region style="height: 28px" />
-
   <header
-    ref="contentHeaderEl"
+    v-if="showDragBar()"
+    ref="dragBarEl"
     data-tauri-drag-region
-    style="
-      display: flex;
-      align-items: center;
-      padding: 4px 12px;
-      font-size: 14px;
-      font-weight: 500;
-      border-bottom: 1px solid var(--app-border);
-    "
-  >
-    <a-flex align="center" :gap="8">
-      <strong>{{ currentTool.title }}</strong>
-    </a-flex>
-  </header>
+    style="height: 28px; flex-shrink: 0; background: var(--app-surface)"
+  />
 </template>

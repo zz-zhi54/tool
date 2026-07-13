@@ -17,7 +17,7 @@ import TomlFormatterView from "../pages/toml-formatter/index.vue";
 import XmlFormatterView from "../pages/xml-formatter/index.vue";
 import YamlFormatterView from "../pages/yaml-formatter/index.vue";
 import QrcodeToolView from "../pages/qrcode-tool/index.vue";
-import { defaultToolId, findToolById } from "../tools/registry";
+import { defaultToolId } from "../tools/registry";
 import { useAutoUpdater } from "../composables/useAutoUpdater";
 import { useAppTheme } from "../composables/useAppTheme";
 import { load, save } from "../utils/storage";
@@ -37,21 +37,6 @@ const { checkOnly } = useAutoUpdater();
 const themeStore = useAppTheme();
 
 const currentToolId = ref(defaultToolId);
-
-const currentTool = computed(() => {
-  if (currentToolId.value === "__settings") {
-    return {
-      id: "__settings",
-      title: "设置",
-      description: "应用偏好设置",
-      category: "data-format" as const,
-      icon: "SettingOutlined",
-      status: "available" as const,
-    };
-  }
-
-  return findToolById(currentToolId.value) ?? findToolById(defaultToolId)!;
-});
 
 function selectTool(toolId: string) {
   currentToolId.value = toolId;
@@ -149,7 +134,7 @@ onBeforeUnmount(() => {
     不属于业务 UI 样式。
   -->
   <a-layout style="height: 100vh; width: 100vw">
-    <ToolStatusBar :current-tool="currentTool" />
+    <ToolStatusBar />
 
     <a-layout style="min-height: 0">
       <a-layout-sider
