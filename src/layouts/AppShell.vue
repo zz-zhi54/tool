@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, onBeforeUnmount, onMounted, provide, ref } from "vue";
-import type { Component, InjectionKey } from "vue";
+import type { Component } from "vue";
 
 import AppSidebar from "../components/AppSidebar.vue";
 import ToolStatusBar from "../components/ToolStatusBar.vue";
@@ -21,16 +21,8 @@ import QrcodeToolView from "../pages/qrcode-tool/index.vue";
 import { defaultToolId } from "../tools/registry";
 import { useAutoUpdater } from "../composables/useAutoUpdater";
 import { useAppTheme } from "../composables/useAppTheme";
+import { OPEN_UPDATE_MODAL_KEY } from "../composables/useUpdateModal";
 import { load, save } from "../utils/storage";
-
-/**
- * 暴露给挂在 chrome（侧边栏 / 顶部导航）上的 UpdateEntryButton 用的「打开 Modal」函数。
- *
- * 由 AppShell 持有 UpdateModal 的 ref，provide 给所有子组件消费，
- * 避免 props / emit 穿透到子树的多个层级。
- */
-const OPEN_UPDATE_MODAL_KEY: InjectionKey<() => void> =
-  Symbol("open-update-modal");
 
 type UpdateModalInstance = InstanceType<typeof UpdateModal>;
 

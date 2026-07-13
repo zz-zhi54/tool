@@ -1,10 +1,11 @@
 <script setup lang="ts">
-import { computed, ref } from "vue";
+import { computed, inject, ref } from "vue";
 
 import { ReloadOutlined } from "@ant-design/icons-vue";
 
 import SettingItem from "../../components/SettingItem.vue";
 import { showInfo } from "../../composables/useMessage";
+import { OPEN_UPDATE_MODAL_KEY } from "../../composables/useUpdateModal";
 import {
   getSettings,
   remove,
@@ -70,6 +71,21 @@ function resetAll() {
   refresh();
   showInfo("所有设置已重置为默认值");
 }
+
+/**
+ * 「关于 → 检查更新」入口：复用 AppShell 暴露的 UpdateModal.open。
+ *
+ * 注入键与 AppShell / UpdateEntryButton 共用：点开后状态由 UpdateModal 接管。
+ */
+const openUpdateModal = inject(OPEN_UPDATE_MODAL_KEY, null);
+
+function handleCheckUpdate() {
+  if (!openUpdateModal) {
+    showInfo("更新入口不可用");
+    return;
+  }
+  openUpdateModal();
+}
 </script>
 
 <template>
@@ -81,9 +97,6 @@ function resetAll() {
     <a-card size="small" :body-style="{ padding: '4px 12px' }">
       <a-flex align="center" :gap="8">
         <strong>设置</strong>
-        <a-typography-text type="secondary">
-          v{{ appVersion }}
-        </a-typography-text>
         <a-flex :flex="'1 1 auto'" />
         <a-button size="small" type="default" @click="resetAll">
           <template #icon>
@@ -119,6 +132,26 @@ function resetAll() {
             @change="onItemChange"
             @reset="resetItem"
           />
+        </a-flex>
+      </a-card>
+
+      <!-- 关于 -->
+      <a-card size="small" title="关于">
+        <a-flex vertical :gap="8">
+          <a-typography-text>
+            Tool Workbench — 基于 Tauri 2 + Vue 3 + TypeScript 的桌面工具箱。
+          </a-typography-text>
+          <a-typography-text type="secondary">
+            所有计算都在前端本地完成，不上传任何数据。
+          </a-typography-text>
+          <a-flex :gap="8">
+            <a-button size="small" type="primary" @click="handleCheckUpdate">
+              检查更新
+            </a-button>
+            <a-typography-text type="secondary" style="align-self: center">
+              当前版本 v{{ appVersion }}
+            </a-typography-text>
+          </a-flex>
         </a-flex>
       </a-card>
     </a-flex>
