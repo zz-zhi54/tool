@@ -45,14 +45,35 @@ const buttonType = computed<"primary" | "default" | "text">(() => {
   return "text";
 });
 
+/**
+ * 按钮文本：根据是否有新版本显示不同文案。
+ *
+ * - 有更新（available）：「升级 v新」+ 火箭图标 + 红色 + 红点
+ * - 已是最新（up-to-date）：「已是最新 · v当前」+ ✓ 图标
+ * - 检查中（checking）：「检查更新…」+ loading
+ * - 其他：兜底显示「更新 · v当前」+ 下载图标
+ */
+const label = computed(() => {
+  if (hasUpdate.value && newVersion.value) {
+    return `升级 v${newVersion.value}`;
+  }
+  if (isUpToDate.value) {
+    return `已是最新 · v${appVersion}`;
+  }
+  return `更新 · v${appVersion}`;
+});
+
 const tooltip = computed(() => {
   if (hasUpdate.value && newVersion.value) {
-    return `有新版本 v${newVersion.value} 可安装`;
+    return `当前 v${appVersion} → v${newVersion.value}，点击查看`;
   }
   if (isUpToDate.value) {
     return `已是最新 v${appVersion}`;
   }
-  return `更新 v${appVersion}`;
+  if (isChecking.value) {
+    return "正在检查更新…";
+  }
+  return `检查 v${appVersion} 是否有更新`;
 });
 
 const openModal = inject(OPEN_UPDATE_MODAL_KEY, null);
@@ -80,8 +101,7 @@ function onClick() {
           <CloudDownloadOutlined v-else />
         </template>
         <span v-if="!props.collapsed">
-          更新 ·
-          <strong>v{{ appVersion }}</strong>
+          {{ label }}
         </span>
       </a-button>
     </a-badge>
