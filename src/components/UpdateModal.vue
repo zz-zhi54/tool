@@ -9,8 +9,16 @@ import packageInfo from "../../package.json";
 const open = ref(false);
 const appVersion = packageInfo.version;
 
-const { status, info, progress, error, runUpdateFlow, relaunch, reset } =
-  useAutoUpdater();
+const {
+  status,
+  info,
+  progress,
+  error,
+  runUpdateFlow,
+  checkOnly,
+  relaunch,
+  reset,
+} = useAutoUpdater();
 
 /**
  * 允许关闭 Modal 的状态：空闲 / 已是最新 / 失败。
@@ -54,11 +62,17 @@ function describeError(err: { stage: string; cause: unknown }): string {
  * 主动打开 Modal 的入口。
  *
  * 由 chrome 上的"更新"按钮（侧边栏 / 顶部导航）通过 inject 拿到本组件 ref 后调用。
- * 这里只负责打开，不再自动跑流程 —— Modal 打开后用户根据 status 决定下一步。
+ *
+ * 行为：reset → 打开 Modal → 立刻跑一次 checkOnly —— 进入 Modal 后用户看到
+ * 的是真实的检查进度，而不是停在 "idle" 分支的"正在检查更新…"占位文案
+ * （之前 openModal 不调检查，所以点按钮后 Modal 永远显示 idle 文案，看似卡死）。
+ *
+ * 如果发现新版本，status 走 available 分支，用户点"立即下载"才进入下载/安装。
  */
-function openModal() {
+async function openModal() {
   reset();
   open.value = true;
+  await checkOnly();
 }
 defineExpose({ open: openModal });
 
