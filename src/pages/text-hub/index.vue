@@ -227,7 +227,7 @@ function handleLineClear() {
             button-style="outline"
             size="small"
           >
-            <a-radio-button v-for="s in CASE_STYLES" :key="s.id" :value="s.id">
+            <a-radio-button v-for="s in CASE_STYLES" :key="s.id" :value="s.id" :title="s.title">
               {{ s.label }}
             </a-radio-button>
           </a-radio-group>
