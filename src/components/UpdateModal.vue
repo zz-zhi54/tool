@@ -17,19 +17,19 @@ const {
   runUpdateFlow,
   checkOnly,
   relaunch,
-  reset,
 } = useAutoUpdater();
 
 /**
  * 允许关闭 Modal 的状态：空闲 / 已是最新 / 失败。
- * 检查中 / 发现新版本 / 下载中 / 下载完成 时点遮罩/关闭键/ESC 都无效，
+ * 检查中 / 发现新版本 / 下载中 / 下载完成 / 重启中 时点遮罩/关闭键/ESC 都无效，
  * 避免误操作打断下载或安装流程。
  */
 const canClose = computed(
   () =>
+    status.value === "idle" ||
     status.value === "up-to-date" ||
-    status.value === "error" ||
-    status.value === "idle",
+    status.value === "ready" ||
+    status.value === "error",
 );
 
 /**
@@ -70,8 +70,10 @@ function describeError(err: { stage: string; cause: unknown }): string {
  * 如果发现新版本，status 走 available 分支，用户点"立即下载"才进入下载/安装。
  */
 async function openModal() {
-  reset();
   open.value = true;
+  // 提前设 checking，确保 waitForSilentlyIdle() 等待期间 Modal 也有转圈，
+  // 而不是停在 idle 分支的"正在检查更新…"无反馈文字上。
+  status.value = "checking";
   await checkOnly();
 }
 defineExpose({ open: openModal });
@@ -170,10 +172,25 @@ async function onRelaunch() {
       <a-typography-text type="secondary">
         点击「立即重启」应用更新。
       </a-typography-text>
-      <a-button type="primary" @click="onRelaunch">
-        <template #icon><RocketOutlined /></template>
-        立即重启
-      </a-button>
+      <a-flex :gap="8">
+        <a-button @click="open = false">稍后重启</a-button>
+        <a-button type="primary" @click="onRelaunch">
+          <template #icon><RocketOutlined /></template>
+          立即重启
+        </a-button>
+      </a-flex>
+    </a-flex>
+
+    <!-- 重启中：成功调用 relaunch() 后到进程真正退出之间的窗口。
+         锁定 Modal，避免用户以为"卡住"再去点。 -->
+    <a-flex
+      v-else-if="status === 'relaunching'"
+      vertical
+      align="center"
+      :gap="12"
+    >
+      <a-spin />
+      <span>正在重启应用…</span>
     </a-flex>
 
     <!-- 失败 -->

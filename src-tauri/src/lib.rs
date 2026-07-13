@@ -8,6 +8,7 @@ fn greet(name: &str) -> String {
 pub fn run() {
     tauri::Builder::default()
         .plugin(tauri_plugin_opener::init())
+        .plugin(tauri_plugin_process::init())
         .setup(|app| {
             // 应用内自动更新：pubkey 由 plugins.updater.pubkey 读取，
             // 签名密钥 TAURI_SIGNING_PRIVATE_KEY 仅在 CI 构建时注入。
