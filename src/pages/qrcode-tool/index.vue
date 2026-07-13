@@ -360,7 +360,13 @@ onBeforeUnmount(() => {
 
             <a-flex align="center" :gap="8" wrap>
               <span>尺寸</span>
-              <a-slider v-model:value="size" :min="160" :max="640" :step="16" />
+              <a-slider
+                v-model:value="size"
+                :min="160"
+                :max="640"
+                :step="16"
+                style="flex: 1 1 auto"
+              />
               <a-typography-text type="secondary">
                 {{ size }}px
               </a-typography-text>
@@ -383,7 +389,13 @@ onBeforeUnmount(() => {
 
             <a-flex align="center" :gap="8" wrap>
               <span>边距</span>
-              <a-slider v-model:value="margin" :min="0" :max="8" :step="1" />
+              <a-slider
+                v-model:value="margin"
+                :min="0"
+                :max="8"
+                :step="1"
+                style="flex: 1 1 auto"
+              />
               <a-typography-text type="secondary">
                 {{ margin }}
               </a-typography-text>
