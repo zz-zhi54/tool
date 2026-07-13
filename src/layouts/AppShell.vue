@@ -11,6 +11,7 @@ import JsonFormatterView from "../pages/json-formatter/index.vue";
 import RegexTesterView from "../pages/regex-tester/index.vue";
 import SettingsView from "../pages/settings/index.vue";
 import SqlGeneratorView from "../pages/sql-generator/index.vue";
+import TextDiffView from "../pages/text-diff/index.vue";
 import TextHubView from "../pages/text-hub/index.vue";
 import TimeHubView from "../pages/time-hub/index.vue";
 import TomlFormatterView from "../pages/toml-formatter/index.vue";
@@ -54,6 +55,7 @@ const VIEWS: Record<string, Component> = {
   "time-hub": TimeHubView,
   "text-hub": TextHubView,
   "regex-tester": RegexTesterView,
+  "text-diff": TextDiffView,
   "sql-generator": SqlGeneratorView,
   "qrcode-tool": QrcodeToolView,
   __settings: SettingsView,

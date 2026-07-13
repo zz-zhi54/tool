@@ -1,10 +1,10 @@
 <script setup lang="ts">
 import { computed, ref } from "vue";
 
-import { DeleteOutlined } from "@ant-design/icons-vue";
+import { DeleteOutlined, FileTextOutlined } from "@ant-design/icons-vue";
 
 import PanelCard from "../../components/PanelCard.vue";
-import { showInfo } from "../../composables/useMessage";
+import { showError, showInfo } from "../../composables/useMessage";
 import { computeLineDiff } from "../../tools/diff/textDiff";
 
 const leftText = ref("");
@@ -20,6 +20,29 @@ const result = computed(() =>
 const hasInput = computed(
   () => leftText.value.trim().length > 0 || rightText.value.trim().length > 0,
 );
+
+/**
+ * 选择本地文本文件并读入对应 textarea。
+ *
+ * antdv <a-upload :before-upload> 在 beforeUpload 返回 false 时阻断上传，
+ * 我们借这一时机用 FileReader.readAsText 读取文件内容塞进 ref。
+ */
+async function handleFilePick(
+  target: "left" | "right",
+  file: File,
+): Promise<boolean> {
+  try {
+    const text = await file.text();
+    if (target === "left") leftText.value = text;
+    else rightText.value = text;
+    showInfo(`已读取 ${file.name}（${text.length} 字符）`);
+  } catch (err) {
+    showError(
+      `读取文件失败：${err instanceof Error ? err.message : String(err)}`,
+    );
+  }
+  return false;
+}
 
 function handleClear() {
   leftText.value = "";
@@ -86,20 +109,48 @@ const MONO_STYLE =
     <a-row :gutter="8" style="flex: 0 0 auto">
       <a-col :span="12">
         <PanelCard icon="FileTextOutlined" title="原文" overflow="hidden">
+          <template #actions>
+            <a-upload
+              :before-upload="(file: File) => handleFilePick('left', file)"
+              :show-upload-list="false"
+              accept="text/*,.json,.xml,.yaml,.yml,.toml,.md,.log,.csv,.tsv,.ini,.conf,.env,.sh,.js,.ts,.jsx,.tsx,.vue,.py,.rb,.go,.rs,.java,.kt,.swift,.c,.cpp,.h,.hpp,.cs,.php,.sql,.html,.css,.scss,.sass,.less,.txt"
+            >
+              <a-button size="small" type="default">
+                <template #icon>
+                  <FileTextOutlined />
+                </template>
+                选择文件
+              </a-button>
+            </a-upload>
+          </template>
           <a-textarea
             v-model:value="leftText"
             :allow-clear="false"
-            placeholder="粘贴原始文本"
+            placeholder="粘贴原始文本，或点击右上角「选择文件」"
             style="height: 200px; min-height: 200px"
           />
         </PanelCard>
       </a-col>
       <a-col :span="12">
         <PanelCard icon="FileTextOutlined" title="新文" overflow="hidden">
+          <template #actions>
+            <a-upload
+              :before-upload="(file: File) => handleFilePick('right', file)"
+              :show-upload-list="false"
+              accept="text/*,.json,.xml,.yaml,.yml,.toml,.md,.log,.csv,.tsv,.ini,.conf,.env,.sh,.js,.ts,.jsx,.tsx,.vue,.py,.rb,.go,.rs,.java,.kt,.swift,.c,.cpp,.h,.hpp,.cs,.php,.sql,.html,.css,.scss,.sass,.less,.txt"
+            >
+              <a-button size="small" type="default">
+                <template #icon>
+                  <FileTextOutlined />
+                </template>
+                选择文件
+              </a-button>
+            </a-upload>
+          </template>
           <a-textarea
             v-model:value="rightText"
             :allow-clear="false"
-            placeholder="粘贴新文本"
+            placeholder="粘贴新文本，或点击右上角「选择文件」"
             style="height: 200px; min-height: 200px"
           />
         </PanelCard>
