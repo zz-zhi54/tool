@@ -118,6 +118,15 @@ export const tools: ToolDefinition[] = [
     accent: "#13c2c2",
   },
   {
+    id: "text-diff",
+    title: "文本 Diff",
+    description: "对比两段文本的差异，按行高亮新增 / 删除 / 相同行。",
+    category: "text",
+    icon: "SwapOutlined",
+    status: "available",
+    accent: "#13c2c2",
+  },
+  {
     id: "qrcode-tool",
     title: "二维码工具",
     description: "生成任意内容的二维码，或从图片中识别二维码内容。",
