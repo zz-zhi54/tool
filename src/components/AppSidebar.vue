@@ -199,8 +199,7 @@ function getPopupContainer(trigger: HTMLElement): HTMLElement {
             <BgColorsOutlined />
           </template>
           <span v-if="!collapsed">
-            主题 ·
-            <strong>{{ currentThemeLabel }}</strong>
+            主题 · {{ currentThemeLabel }}
           </span>
         </a-button>
         <template #overlay>
