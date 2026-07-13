@@ -42,10 +42,7 @@
       "endpoints": [
         "https://github.com/zz-zhi54/tool/releases/latest/download/latest.json",
         "https://gh-proxy.com/https://github.com/zz-zhi54/tool/releases/latest/download/latest.json"
-      ],
-      "windows": {
-        "installMode": "basic"
-      }
+      ]
     }
   }
 }
