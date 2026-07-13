@@ -1,247 +1,86 @@
 /**
- * 「检查 / 下载 / 安装就绪」通知调度。
+ * 「下载完成 / 安装就绪」通知。
  *
- * 整个更新流程都用 antdv notification / message 提示，不锁界面。
- * Modal 仅作「重启确认」入口，且本身不再锁屏。
+ * AppShell 启动时已经通过 useAutoUpdater.checkAndDownloadSilently()
+ * 在后台跑完 check + download；本文件只负责两个 UI 副作用：
+ *
+ * 1. 下载中 → 右下角 message 浮字持续显示百分比（status=downloading 时启用）
+ * 2. 下载完成（status=ready）→ 通知「vX 下载完成」+ 立即重启 / 稍后
+ *
+ * 没有任何"询问是否下载"的弹窗——启动发现新版本就直接后台下载，
+ * 下载完才让用户决定是否重启，符合"少打扰"原则。
  */
 
 import { h, watch } from "vue";
 import type { VNode } from "vue";
 import { notification } from "ant-design-vue";
-import {
-  CloudDownloadOutlined,
-  RocketOutlined,
-} from "@ant-design/icons-vue";
+import { RocketOutlined } from "@ant-design/icons-vue";
 
 import { useAutoUpdater } from "./useAutoUpdater";
 import { destroyMessage, showPersistent } from "./useMessage";
-import type { UpdateModalAction } from "./useUpdateModal";
-import packageInfo from "../../package.json";
 
-const NOTICE_KEY = "updater-notice";
+const NOTICE_KEY = "updater-ready";
 const DOWNLOAD_MSG_KEY = "updater-download-progress";
 
-export type UpdateModalActions = Record<
-  UpdateModalAction,
-  () => void | Promise<void>
->;
-
-function describeCause(cause: unknown): string {
-  return cause instanceof Error
-    ? cause.message
-    : typeof cause === "string"
-      ? cause
-      : "未知错误";
-}
-
-function describeError(
-  stage: "check" | "download" | "relaunch",
-  cause: unknown,
-): string {
-  const detail = describeCause(cause);
-  switch (stage) {
-    case "check":
-      return `检查更新失败：${detail}`;
-    case "download":
-      return `下载更新失败：${detail}`;
-    case "relaunch":
-      return `重启失败：${detail}`;
-    default:
-      return detail;
-  }
-}
-
 export function useUpdateNotification() {
-  const { checkOnly, runUpdateFlow, status, progress, info, error } =
-    useAutoUpdater();
+  const { status, progress, info, relaunch } = useAutoUpdater();
 
-  /**
-   * 订阅 status / progress：downloading 时持续显示带百分比的浮字，
-   * 其他任何状态都销毁浮字。
-   */
+  // 下载中持续显示带百分比的浮字，结束态自动销毁。
   watch(
     [status, progress],
     ([s, p]) => {
       if (s === "downloading") {
-        const v = info.value?.version ?? "?";
-        showPersistent(`下载 v${v} … ${p}%`, DOWNLOAD_MSG_KEY);
-        return;
+        showPersistent(
+          `下载 v${info.value?.version ?? "?"} … ${p}%`,
+          DOWNLOAD_MSG_KEY,
+        );
+      } else {
+        destroyMessage(DOWNLOAD_MSG_KEY);
       }
-      destroyMessage(DOWNLOAD_MSG_KEY);
     },
     { immediate: false },
   );
 
-  /**
-   * 触发一次主动检查并以通知形式反馈结果。
-   */
-  async function triggerCheck(actions: UpdateModalActions): Promise<void> {
-    destroyMessage(DOWNLOAD_MSG_KEY);
-
-    notification.open({
-      key: NOTICE_KEY,
-      type: "info",
-      message: "检查更新中…",
-      description: `正在连接 v${packageInfo.version} 的更新服务器。`,
-      duration: null,
-      placement: "topRight",
-    });
-
-    const result = await checkOnly();
-
-    if (result === "up-to-date") {
-      notification.open({
-        key: NOTICE_KEY,
-        type: "success",
-        message: "已是最新版本",
-        description: `当前已是 v${packageInfo.version}，无需更新。`,
-        duration: 4,
-        placement: "topRight",
-      });
-      return;
-    }
-
-    if (result === "error") {
-      notification.open({
-        key: NOTICE_KEY,
-        type: "error",
-        message: "检查更新失败",
-        description: describeError("check", error.value?.cause),
-        duration: 6,
-        placement: "topRight",
-        btn: h(
-          "a-button",
-          {
-            size: "small",
-            onClick: () => {
-              notification.close(NOTICE_KEY);
-              void actions.openInfo();
-            },
-          },
-          { default: () => "查看" },
-        ) as unknown as VNode,
-      });
-      return;
-    }
-
-    if (result === "available") {
+  // ready 时弹通知让用户决定是否重启；点击 X / 稍后都保留 status=ready 不动。
+  watch(
+    status,
+    (s) => {
+      if (s !== "ready") return;
       const v = info.value?.version ?? "";
-      const buttons = h("div", { style: "display: flex; gap: 8px;" }, [
-        h(
-          "a-button",
-          {
-            size: "small",
-            onClick: () => notification.close(NOTICE_KEY),
-          },
-          { default: () => "稍后" },
-        ),
-        h(
-          "a-button",
-          {
-            size: "small",
-            type: "primary",
-            onClick: async () => {
-              notification.close(NOTICE_KEY);
-              await runDownload(actions);
-            },
-          },
-          {
-            default: () => "立即下载",
-            icon: () => h(CloudDownloadOutlined),
-          },
-        ),
-      ]);
-      notification.open({
-        key: NOTICE_KEY,
-        type: "info",
-        message: `发现新版本 v${v}`,
-        description: "点「立即下载」开始后台下载，过程中可继续使用其他工具。",
-        duration: null,
-        placement: "topRight",
-        btn: buttons as unknown as VNode,
-      });
-      return;
-    }
-
-    // 其他状态不该出现 —— 关掉通知兜底。
-    notification.close(NOTICE_KEY);
-  }
-
-  /**
-   * 后台跑 runUpdateFlow，下载进度由上面的 watch → message 浮字呈现，
-   * 完成 / 失败后用通知告知。
-   */
-  async function runDownload(actions: UpdateModalActions): Promise<void> {
-    notification.close(NOTICE_KEY);
-
-    const result = await runUpdateFlow();
-
-    if (result === "ready") {
-      const v = info.value?.version ?? "";
-      const buttons = h("div", { style: "display: flex; gap: 8px;" }, [
-        h(
-          "a-button",
-          {
-            size: "small",
-            onClick: () => notification.close(NOTICE_KEY),
-          },
-          { default: () => "稍后" },
-        ),
-        h(
-          "a-button",
-          {
-            size: "small",
-            type: "primary",
-            onClick: () => {
-              notification.close(NOTICE_KEY);
-              void actions.openRelaunch();
-            },
-          },
-          {
-            default: () => "立即重启",
-            icon: () => h(RocketOutlined),
-          },
-        ),
-      ]);
       notification.open({
         key: NOTICE_KEY,
         type: "success",
         message: `v${v} 下载完成`,
-        description: "点「立即重启」应用更新；选「稍后」可继续使用，下次启动再装。",
+        description: "点「立即重启」应用更新；选「稍后」下次启动再装。",
         duration: null,
         placement: "topRight",
-        btn: buttons as unknown as VNode,
-      });
-      return;
-    }
-
-    if (result === "error") {
-      const stage = error.value?.stage ?? "download";
-      notification.open({
-        key: NOTICE_KEY,
-        type: "error",
-        message: stage === "check" ? "检查更新失败" : "下载失败",
-        description: describeError(stage, error.value?.cause),
-        duration: 6,
-        placement: "topRight",
-        btn: h(
-          "a-button",
-          {
-            size: "small",
-            onClick: () => {
-              notification.close(NOTICE_KEY);
-              void actions.openInfo();
+        btn: h("div", { style: "display: flex; gap: 8px;" }, [
+          h(
+            "a-button",
+            {
+              size: "small",
+              onClick: () => notification.close(NOTICE_KEY),
             },
-          },
-          { default: () => "查看" },
-        ) as unknown as VNode,
+            { default: () => "稍后" },
+          ),
+          h(
+            "a-button",
+            {
+              size: "small",
+              type: "primary",
+              onClick: () => {
+                notification.close(NOTICE_KEY);
+                void relaunch();
+              },
+            },
+            {
+              default: () => "立即重启",
+              icon: () => h(RocketOutlined),
+            },
+          ),
+        ]) as unknown as VNode,
       });
-      return;
-    }
-
-    // up-to-date / idle 等不该出现，兜底关掉通知。
-    notification.close(NOTICE_KEY);
-  }
-
-  return { triggerCheck, runDownload };
+    },
+    { immediate: false },
+  );
 }

@@ -140,6 +140,67 @@ export function useAutoUpdater() {
   }
 
   /**
+   * 静默检查 + 直接后台下载。给 AppShell 启动用：
+   * 如果发现新版本，立即在后台拉取安装包，不弹任何"询问"通知打扰用户；
+   * 下载完成后由通知侧决定是否提示重启。
+   *
+   * 行为：
+   * - 有 update → 把进度同步到 status / progress / info；下载完成进 ready
+   * - 无 update → 直接返回，不动状态机
+   * - 任何错（check 失败 / 签名错 / 下载失败）静默忽略，与启动静默检查同等待遇
+   *
+   * 用 userCheckInFlight + silentCheckInFlight 互斥，避免与主动检查抢状态。
+   */
+  async function checkAndDownloadSilently(): Promise<void> {
+    if (!import.meta.env.PROD || !isTauri()) return;
+
+    await waitForSilentlyIdle();
+    if (userCheckInFlight.value) return;
+
+    silentCheckInFlight.value = true;
+    userCheckInFlight.value = true;
+    try {
+      const update = await check({ timeout: CHECK_TIMEOUT_MS });
+      if (!update) return;
+
+      info.value = {
+        version: update.version,
+        notes: update.body ?? undefined,
+        date: update.date ?? undefined,
+      };
+      hasUpdate.value = true;
+      status.value = "downloading";
+
+      try {
+        await update.downloadAndInstall((event) => {
+          switch (event.event) {
+            case "Started":
+              total.value = event.data.contentLength ?? 0;
+              downloaded.value = 0;
+              break;
+            case "Progress":
+              downloaded.value += event.data.chunkLength;
+              break;
+            case "Finished":
+              downloaded.value = total.value;
+              break;
+          }
+        });
+        status.value = "ready";
+      } catch {
+        // 下载失败静默；不污染 error（启动场景下用户没主动点击）
+        status.value = "error";
+        error.value = { stage: "download", cause: new Error("静默下载失败") };
+      }
+    } catch {
+      // check() 失败静默；不动 status
+    } finally {
+      silentCheckInFlight.value = false;
+      userCheckInFlight.value = false;
+    }
+  }
+
+  /**
    * 主动检查启动前调用：等到当前静默检查（若在跑）结束。
    *
    * 用一个轻量轮询，不引入额外的状态字段；空跑的轮询间隔短到肉眼不可见，
@@ -311,6 +372,7 @@ export function useAutoUpdater() {
   void checkOnly;
   void waitForSilentlyIdle;
   void runUpdateFlow;
+  void checkAndDownloadSilently;
 
   return {
     // 状态
@@ -324,6 +386,7 @@ export function useAutoUpdater() {
     // 行为
     checkOnly,
     checkSilently,
+    checkAndDownloadSilently,
     runUpdateFlow,
     relaunch,
     reset,

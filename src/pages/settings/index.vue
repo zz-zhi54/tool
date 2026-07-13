@@ -1,12 +1,10 @@
 <script setup lang="ts">
-import { computed, inject, ref } from "vue";
+import { computed, ref } from "vue";
 
 import { ReloadOutlined } from "@ant-design/icons-vue";
 
 import SettingItem from "../../components/SettingItem.vue";
 import { showInfo } from "../../composables/useMessage";
-import { OPEN_UPDATE_MODAL_KEY } from "../../composables/useUpdateModal";
-import { useUpdateNotification } from "../../composables/useUpdateNotification";
 import {
   getSettings,
   remove,
@@ -72,26 +70,6 @@ function resetAll() {
   refresh();
   showInfo("所有设置已重置为默认值");
 }
-
-/**
- * 「关于 → 检查更新」入口：复用 useUpdateNotification 走通知而非 modal。
- *
- * 与 sidebar 的更新按钮保持一致：检查不阻塞界面，发现新版本后由通知里的
- * 「立即下载 / 立即重启」按钮回调打开 modal。
- */
-const openUpdateModal = inject(OPEN_UPDATE_MODAL_KEY, null);
-const { triggerCheck } = useUpdateNotification();
-
-function handleCheckUpdate() {
-  if (!openUpdateModal) {
-    showInfo("更新入口不可用");
-    return;
-  }
-  void triggerCheck({
-    openRelaunch: () => openUpdateModal("openRelaunch"),
-    openInfo: () => openUpdateModal("openInfo"),
-  });
-}
 </script>
 
 <template>
@@ -150,14 +128,9 @@ function handleCheckUpdate() {
           <a-typography-text type="secondary">
             所有计算都在前端本地完成，不上传任何数据。
           </a-typography-text>
-          <a-flex :gap="8">
-            <a-button size="small" type="primary" @click="handleCheckUpdate">
-              检查更新
-            </a-button>
-            <a-typography-text type="secondary" style="align-self: center">
-              当前版本 v{{ appVersion }}
-            </a-typography-text>
-          </a-flex>
+          <a-typography-text type="secondary">
+            当前版本 v{{ appVersion }}
+          </a-typography-text>
         </a-flex>
       </a-card>
     </a-flex>
