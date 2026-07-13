@@ -6,6 +6,7 @@ import { ReloadOutlined } from "@ant-design/icons-vue";
 import SettingItem from "../../components/SettingItem.vue";
 import { showInfo } from "../../composables/useMessage";
 import { OPEN_UPDATE_MODAL_KEY } from "../../composables/useUpdateModal";
+import { useUpdateNotification } from "../../composables/useUpdateNotification";
 import {
   getSettings,
   remove,
@@ -73,18 +74,23 @@ function resetAll() {
 }
 
 /**
- * 「关于 → 检查更新」入口：复用 AppShell 暴露的 UpdateModal.open。
+ * 「关于 → 检查更新」入口：复用 useUpdateNotification 走通知而非 modal。
  *
- * 注入键与 AppShell / UpdateEntryButton 共用：点开后状态由 UpdateModal 接管。
+ * 与 sidebar 的更新按钮保持一致：检查不阻塞界面，发现新版本后由通知里的
+ * 「立即下载 / 立即重启」按钮回调打开 modal。
  */
 const openUpdateModal = inject(OPEN_UPDATE_MODAL_KEY, null);
+const { triggerCheck } = useUpdateNotification();
 
 function handleCheckUpdate() {
   if (!openUpdateModal) {
     showInfo("更新入口不可用");
     return;
   }
-  openUpdateModal();
+  void triggerCheck({
+    openRelaunch: () => openUpdateModal("openRelaunch"),
+    openInfo: () => openUpdateModal("openInfo"),
+  });
 }
 </script>
 

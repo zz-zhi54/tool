@@ -90,7 +90,7 @@ function onUserToggle(value: boolean) {
 // ── 更新 Modal：单例挂载 + provide 打开入口 ───────────────────
 
 const updateModalRef = ref<UpdateModalInstance | null>(null);
-provide(OPEN_UPDATE_MODAL_KEY, () => updateModalRef.value?.open?.());
+provide(OPEN_UPDATE_MODAL_KEY, (action) => updateModalRef.value?.open?.(action));
 
 onMounted(() => {
   void checkSilently();

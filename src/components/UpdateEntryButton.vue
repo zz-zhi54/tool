@@ -8,8 +8,9 @@
  * - up-to-date → 绿色 + 对勾图标，标识「运行在最新版本」
  * - 其他状态   → 灰色 + 下载图标（默认）
  *
- * 点击行为：始终打开共享 Modal（由 AppShell 通过 inject 提供打开函数）。
- * 这样把"流程是否要立刻跑"统一交给 Modal 内部根据 status 决定。
+ * 点击行为：触发 `triggerCheck()`，**不**直接弹模态。
+ * 检查 / 下载都走通知流程；只有用户点通知里的「立即重启」才会通过
+ * openRelaunch 打开 UpdateModal。openInfo 留给错误通知的「查看」按钮。
  */
 
 import { computed, inject } from "vue";
@@ -20,7 +21,11 @@ import {
 } from "@ant-design/icons-vue";
 
 import { useAutoUpdater } from "../composables/useAutoUpdater";
-import { OPEN_UPDATE_MODAL_KEY } from "../composables/useUpdateModal";
+import {
+  OPEN_UPDATE_MODAL_KEY,
+  type OpenUpdateModalFn,
+} from "../composables/useUpdateModal";
+import { useUpdateNotification } from "../composables/useUpdateNotification";
 import packageInfo from "../../package.json";
 
 const props = withDefaults(
@@ -32,6 +37,11 @@ const props = withDefaults(
 );
 
 const { status, info, hasUpdate: remoteHasUpdate } = useAutoUpdater();
+const { triggerCheck } = useUpdateNotification();
+const openModal = inject(
+  OPEN_UPDATE_MODAL_KEY,
+  null,
+) as OpenUpdateModalFn | null;
 const appVersion = packageInfo.version;
 
 /**
@@ -122,10 +132,25 @@ const tooltip = computed(() => {
   return `检查 v${appVersion} 是否有更新`;
 });
 
-const openModal = inject(OPEN_UPDATE_MODAL_KEY, null);
-
+/**
+ * 点击行为：触发检查（用通知反馈结果），不直接开 modal。
+ *
+ * 检查 / 下载都走通知流程；只有用户点通知里的「立即重启」才会通过
+ * openRelaunch 打开 UpdateModal。openInfo 留给错误通知的「查看」按钮。
+ */
 function onClick() {
-  openModal?.();
+  if (!openModal) {
+    // 没有 modal 注入时（如单测）只跑检查，通知由 triggerCheck 内部处理。
+    void triggerCheck({
+      openRelaunch: () => {},
+      openInfo: () => {},
+    });
+    return;
+  }
+  void triggerCheck({
+    openRelaunch: () => openModal("openRelaunch"),
+    openInfo: () => openModal("openInfo"),
+  });
 }
 </script>
 

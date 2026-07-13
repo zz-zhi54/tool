@@ -33,3 +33,20 @@ export function showWarning(content: string): void {
 export function showInfo(content: string): void {
   showMessage(content, "info");
 }
+
+/**
+ * 弹一条持续显示（duration: 0）的 message，可由同 key 后续调用更新文本。
+ *
+ * 用在后台进度这类需要持续更新、不希望被自动消失打断的场景。
+ *
+ * @param key    唯一 key，重复调用同 key 会**就地更新**文本
+ *               （antdv 的 message.open 在 key 相同时不会新建一条）。
+ */
+export function showPersistent(content: string, key: string): void {
+  message.open({ content, duration: 0, key });
+}
+
+/** 主动销毁指定 key 的 message（用于下载完成后清掉进度提示）。 */
+export function destroyMessage(key: string): void {
+  message.destroy(key);
+}
