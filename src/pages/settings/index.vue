@@ -1,11 +1,11 @@
 <script setup lang="ts">
-import { computed, inject, ref } from "vue";
+import { computed, ref } from "vue";
 
 import { ReloadOutlined } from "@ant-design/icons-vue";
 
 import SettingItem from "../../components/SettingItem.vue";
+import { useAutoUpdater } from "../../composables/useAutoUpdater";
 import { showInfo } from "../../composables/useMessage";
-import { OPEN_UPDATE_MODAL_KEY } from "../../composables/useUpdateModal";
 import {
   getSettings,
   remove,
@@ -22,6 +22,12 @@ import type {
 import packageInfo from "../../../package.json";
 
 const appVersion = packageInfo.version;
+const { remoteVersion, remoteVersionStatus } = useAutoUpdater();
+const remoteDisplayVersion = computed(() =>
+  remoteVersionStatus.value === "checked"
+    ? (remoteVersion.value ?? appVersion)
+    : null,
+);
 
 const items = ref<SettingSnapshot[]>(getSettings());
 
@@ -70,21 +76,6 @@ function resetAll() {
   for (const meta of SETTINGS) remove(meta.key);
   refresh();
   showInfo("所有设置已重置为默认值");
-}
-
-/**
- * 「关于 → 检查更新」入口：复用 AppShell 暴露的 UpdateModal.open。
- *
- * 注入键与 AppShell / UpdateEntryButton 共用：点开后状态由 UpdateModal 接管。
- */
-const openUpdateModal = inject(OPEN_UPDATE_MODAL_KEY, null);
-
-function handleCheckUpdate() {
-  if (!openUpdateModal) {
-    showInfo("更新入口不可用");
-    return;
-  }
-  openUpdateModal();
 }
 </script>
 
@@ -135,24 +126,39 @@ function handleCheckUpdate() {
         </a-flex>
       </a-card>
 
-      <!-- 关于 -->
-      <a-card size="small" title="关于">
-        <a-flex vertical :gap="8">
-          <a-typography-text>
-            Tool Workbench — 基于 Tauri 2 + Vue 3 + TypeScript 的桌面工具箱。
-          </a-typography-text>
-          <a-typography-text type="secondary">
-            所有计算都在前端本地完成，不上传任何数据。
-          </a-typography-text>
-          <a-flex :gap="8">
-            <a-button size="small" type="primary" @click="handleCheckUpdate">
-              检查更新
-            </a-button>
-            <a-typography-text type="secondary" style="align-self: center">
-              当前版本 v{{ appVersion }}
+      <a-card size="small" title="版本信息">
+        <a-descriptions size="small" :column="1">
+          <a-descriptions-item label="当前版本">
+            <a-tag color="blue">v{{ appVersion }}</a-tag>
+          </a-descriptions-item>
+          <a-descriptions-item label="远程最新版本">
+            <a-tag
+              v-if="remoteDisplayVersion"
+              :color="remoteVersion ? 'orange' : 'green'"
+            >
+              v{{ remoteDisplayVersion }}
+            </a-tag>
+            <a-spin
+              v-else-if="remoteVersionStatus === 'checking'"
+              size="small"
+            />
+            <a-typography-text
+              v-else-if="remoteVersionStatus === 'error'"
+              type="danger"
+            >
+              获取失败
             </a-typography-text>
-          </a-flex>
-        </a-flex>
+            <a-typography-text
+              v-else-if="remoteVersionStatus === 'unavailable'"
+              type="secondary"
+            >
+              仅正式桌面版可用
+            </a-typography-text>
+            <a-typography-text v-else type="secondary">
+              等待检查
+            </a-typography-text>
+          </a-descriptions-item>
+        </a-descriptions>
       </a-card>
     </a-flex>
   </a-flex>

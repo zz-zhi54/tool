@@ -84,6 +84,18 @@ const progress = computed(() =>
  */
 const hasUpdate = ref(false);
 
+/** 远程版本检查状态；独立于下载 / 安装状态机，仅供只读信息展示。 */
+type RemoteVersionStatus =
+  | "idle"
+  | "checking"
+  | "checked"
+  | "error"
+  | "unavailable";
+
+/** 启动静默检查发现的远程版本；无更新时由展示层回退为当前版本。 */
+const remoteVersion = shallowRef<string | null>(null);
+const remoteVersionStatus = ref<RemoteVersionStatus>("idle");
+
 /**
  * 用户主动检查正在进行中。静默检查看到此标志会**完全跳过本轮**，
  * 避免：
@@ -136,6 +148,75 @@ export function useAutoUpdater() {
       // （不要清零，否则用户主动检查刚刚拿到的结果会被这次失败抹掉）。
     } finally {
       silentCheckInFlight.value = false;
+    }
+  }
+
+  /**
+   * 静默检查 + 直接后台下载。给 AppShell 启动用：
+   * 如果发现新版本，立即在后台拉取安装包，不弹任何"询问"通知打扰用户；
+   * 下载完成后由通知侧决定是否提示重启。
+   *
+   * 行为：
+   * - 有 update → 把进度同步到 status / progress / info；下载完成进 ready
+   * - 无 update → 直接返回，不动状态机
+   * - 任何错（check 失败 / 签名错 / 下载失败）静默忽略，与启动静默检查同等待遇
+   *
+   * 用 userCheckInFlight + silentCheckInFlight 互斥，避免与主动检查抢状态。
+   */
+  async function checkAndDownloadSilently(): Promise<void> {
+    if (!import.meta.env.PROD || !isTauri()) {
+      remoteVersionStatus.value = "unavailable";
+      return;
+    }
+
+    await waitForSilentlyIdle();
+    if (userCheckInFlight.value) return;
+
+    silentCheckInFlight.value = true;
+    userCheckInFlight.value = true;
+    remoteVersionStatus.value = "checking";
+    try {
+      const update = await check({ timeout: CHECK_TIMEOUT_MS });
+      remoteVersion.value = update?.version ?? null;
+      remoteVersionStatus.value = "checked";
+      if (!update) return;
+
+      info.value = {
+        version: update.version,
+        notes: update.body ?? undefined,
+        date: update.date ?? undefined,
+      };
+      hasUpdate.value = true;
+      status.value = "downloading";
+
+      try {
+        await update.downloadAndInstall((event) => {
+          switch (event.event) {
+            case "Started":
+              total.value = event.data.contentLength ?? 0;
+              downloaded.value = 0;
+              break;
+            case "Progress":
+              downloaded.value += event.data.chunkLength;
+              break;
+            case "Finished":
+              downloaded.value = total.value;
+              break;
+          }
+        });
+        status.value = "ready";
+      } catch {
+        // 下载失败静默；不污染 error（启动场景下用户没主动点击）
+        status.value = "error";
+        error.value = { stage: "download", cause: new Error("静默下载失败") };
+      }
+    } catch {
+      // check() 失败静默；仅记录远程版本获取失败，不污染下载状态机
+      remoteVersion.value = null;
+      remoteVersionStatus.value = "error";
+    } finally {
+      silentCheckInFlight.value = false;
+      userCheckInFlight.value = false;
     }
   }
 
@@ -307,10 +388,13 @@ export function useAutoUpdater() {
   // 显式引用本文件私有状态/行为，避免 vue-tsc 的 noUnusedLocals 误报
   // （这些在 return 中以 shorthand 形式暴露，TS 静态分析无法追踪）。
   void progress;
+  void remoteVersion;
+  void remoteVersionStatus;
   void checkSilently;
   void checkOnly;
   void waitForSilentlyIdle;
   void runUpdateFlow;
+  void checkAndDownloadSilently;
 
   return {
     // 状态
@@ -321,9 +405,12 @@ export function useAutoUpdater() {
     progress,
     error,
     hasUpdate,
+    remoteVersion,
+    remoteVersionStatus,
     // 行为
     checkOnly,
     checkSilently,
+    checkAndDownloadSilently,
     runUpdateFlow,
     relaunch,
     reset,

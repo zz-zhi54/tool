@@ -18,7 +18,6 @@ import type {
 } from "../types/tool";
 import { type ThemeName, useAppTheme } from "../composables/useAppTheme";
 import { getIconByName } from "../utils/icons";
-import UpdateEntryButton from "./UpdateEntryButton.vue";
 
 defineProps<{
   currentToolId: string;
@@ -211,8 +210,6 @@ function getPopupContainer(trigger: HTMLElement): HTMLElement {
           </a-menu>
         </template>
       </a-dropdown>
-
-      <UpdateEntryButton :collapsed="collapsed" />
 
       <a-button
         block

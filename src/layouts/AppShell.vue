@@ -1,10 +1,9 @@
 <script setup lang="ts">
-import { computed, onBeforeUnmount, onMounted, provide, ref } from "vue";
+import { computed, onBeforeUnmount, onMounted, ref } from "vue";
 import type { Component } from "vue";
 
 import AppSidebar from "../components/AppSidebar.vue";
 import ToolStatusBar from "../components/ToolStatusBar.vue";
-import UpdateModal from "../components/UpdateModal.vue";
 import EncodingHubView from "../pages/encoding-hub/index.vue";
 import HtmlEntityCodecView from "../pages/html-entity-codec/index.vue";
 import JsonFormatterView from "../pages/json-formatter/index.vue";
@@ -20,13 +19,12 @@ import YamlFormatterView from "../pages/yaml-formatter/index.vue";
 import QrcodeToolView from "../pages/qrcode-tool/index.vue";
 import { defaultToolId } from "../tools/registry";
 import { useAutoUpdater } from "../composables/useAutoUpdater";
+import { useUpdateNotification } from "../composables/useUpdateNotification";
 import { useAppTheme } from "../composables/useAppTheme";
-import { OPEN_UPDATE_MODAL_KEY } from "../composables/useUpdateModal";
 import { load, save } from "../utils/storage";
 
-type UpdateModalInstance = InstanceType<typeof UpdateModal>;
-
-const { checkSilently } = useAutoUpdater();
+const { checkAndDownloadSilently } = useAutoUpdater();
+useUpdateNotification();
 const themeStore = useAppTheme();
 
 const currentToolId = ref(defaultToolId);
@@ -87,13 +85,12 @@ function onUserToggle(value: boolean) {
   save(SIDEBAR_COLLAPSED_KEY, value);
 }
 
-// ── 更新 Modal：单例挂载 + provide 打开入口 ───────────────────
-
-const updateModalRef = ref<UpdateModalInstance | null>(null);
-provide(OPEN_UPDATE_MODAL_KEY, () => updateModalRef.value?.open?.());
+// ── 启动时静默检查 + 后台下载 ────────────────────────────
 
 onMounted(() => {
-  void checkSilently();
+  // 启动后静默跑一次 check；有新版本就直接后台下载，完成后由 useUpdateNotification
+  // 弹通知让用户决定是否重启。无更新 / 失败都静默不打扰。
+  void checkAndDownloadSilently();
 
   // 初次同步
   syncNarrow();
@@ -154,8 +151,5 @@ onBeforeUnmount(() => {
         </KeepAlive>
       </a-layout-content>
     </a-layout>
-
-    <!-- 全局共享的更新 Modal，只挂一份 -->
-    <UpdateModal ref="updateModalRef" />
   </a-layout>
 </template>
