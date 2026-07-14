@@ -3,6 +3,22 @@
 此项目的所有显着更改都将记录在此文件中。请参阅 [常规提交](https://www.conventionalcommits.org/) 了解提交指南。
 
 ---
+## [0.1.12](https://github.com/zz-zhi54/tool/compare/v0.1.11..v0.1.12) - 2026-07-14
+
+### Bug Fixes
+
+- **(ui)** 收紧 Windows 滚动条样式以匹配主题 - ([43272a7](https://github.com/zz-zhi54/tool/commit/43272a7fc28fefb72ba9de7a4bc4c122a75adc36)) - zz_zhi
+
+### Documentation
+
+- **(agents)** 记录版本 bump 后必须重生成 CHANGELOG 的规范 - ([4a4ae60](https://github.com/zz-zhi54/tool/commit/4a4ae6007f2830c04440174932793ca3995079db)) - zz_zhi
+- **(changelog)** 重新生成 0.1.11 段落 - ([e9a83e0](https://github.com/zz-zhi54/tool/commit/e9a83e03fa639c06102ab1ba34d341ed5e825963)) - zz_zhi
+
+### Miscellaneous Chores
+
+- **(release)** 0.1.11 → 0.1.12 - ([55f277f](https://github.com/zz-zhi54/tool/commit/55f277fa880a4c8925e99998480e14f845ae59ad)) - zz_zhi
+
+---
 ## [0.1.11](https://github.com/zz-zhi54/tool/compare/v0.1.10..v0.1.11) - 2026-07-14
 
 ### Bug Fixes
