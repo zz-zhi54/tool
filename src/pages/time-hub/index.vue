@@ -109,7 +109,7 @@ const tsFields = computed(() => {
 </script>
 
 <template>
-  <a-flex vertical :gap="8" style="height: 100%; min-height: 0; overflow: auto">
+  <a-flex vertical :gap="8" style="height: 100%; padding: 8px; box-sizing: border-box; min-height: 0">
     <!-- 顶部状态条：标题 + 实时时钟 -->
     <a-card size="small" :body-style="{ padding: '4px 12px' }">
       <a-flex align="center" :gap="8">
@@ -121,7 +121,8 @@ const tsFields = computed(() => {
       </a-flex>
     </a-card>
 
-    <PanelCard icon="ClockCircleOutlined" title="时间 + 时区">
+    <div style="flex: 1 1 0; min-height: 0">
+      <PanelCard icon="ClockCircleOutlined" title="时间 + 时区" overflow="auto">
       <a-flex vertical :gap="12">
         <!-- 输入区 -->
         <a-flex align="center" :gap="8">
@@ -236,6 +237,7 @@ const tsFields = computed(() => {
           </a-card>
         </template>
       </a-flex>
-    </PanelCard>
+      </PanelCard>
+    </div>
   </a-flex>
 </template>
