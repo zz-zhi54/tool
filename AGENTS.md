@@ -24,12 +24,12 @@ src-tauri/            # Rust 后端（Tauri 2 crate）
 
 完整命令参见 [README.md](./README.md)。常用命令：
 
-| 命令 | 用途 |
-|---|---|
-| `npm install` | 安装前端依赖 |
-| `npm run tauri dev` | 启动桌面开发环境（Vite + Tauri） |
-| `npm run build` | 类型检查 + 生产构建 |
-| `npm run tauri build` | 打包桌面分发文件 |
+| 命令                  | 用途                             |
+| --------------------- | -------------------------------- |
+| `npm install`         | 安装前端依赖                     |
+| `npm run tauri dev`   | 启动桌面开发环境（Vite + Tauri） |
+| `npm run build`       | 类型检查 + 生产构建              |
+| `npm run tauri build` | 打包桌面分发文件                 |
 
 Rust 端使用标准 Cargo 命令（在 `src-tauri/` 内执行 `cargo build`、`cargo fmt`、`cargo clippy`）。
 
@@ -49,6 +49,7 @@ Rust 端使用标准 Cargo 命令（在 `src-tauri/` 内执行 `cargo build`、`
 - UI 改动必须在 PR 描述中附上截图。
 - 禁止提交构建产物：`src-tauri/gen/`、`src-tauri/target/`、`dist/`、`node_modules/`。
 - CI 仅在 push 到 `main` 分支时触发；PR 不自动构建。Dependabot 负责依赖版本更新。
+- 提交 PR 前同步 bump 版本号：`package.json`、`src-tauri/Cargo.toml`、`src-tauri/tauri.conf.json` 三处保持一致（前端与 Rust 端必须同步）。
 
 ## 新增工具
 
