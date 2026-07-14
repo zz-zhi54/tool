@@ -2,35 +2,36 @@
 
 此项目的所有显着更改都将记录在此文件中。请参阅 [常规提交](https://www.conventionalcommits.org/) 了解提交指南。
 
-> 本文件由 [git-cliff](https://git-cliff.org/) 按 Conventional Commits 从 git 历史生成，配置见 [`cliff.toml`](./cliff.toml)。
-> 修改后请用 `git-cliff --output CHANGELOG.md` 重新生成。
-> `release.yml` 在发布时会按当前 `Cargo.toml` 的 version 提取对应 `## [X.Y.Z]` 段落作为 GitHub Release body。
-
 ---
-
-## [0.1.10] - 2026-07-14
+## [0.1.11](https://github.com/zz-zhi54/tool/compare/v0.1.10..v0.1.11) - 2026-07-14
 
 ### Bug Fixes
 
-- **(ci)** 给 `Extract CHANGELOG section` step 显式加 `shell: bash`。Windows runner 默认把 `run:` 喂给 PowerShell 7，整段脚本是 bash 写的（`set -euo pipefail` / `awk` BEGIN 块 / `if ! grep -q ...; then ... fi`），pwsh 在词法分析阶段就被 `!` 卡住报 parser error，导致 windows-2022 job 整体失败、release 状态显示 `failure`。Git Bash 在 windows-* runner 默认可用，强制走 bash 后三平台走同一解释器。
+- **(time-hub)** 对齐根容器 padding 并让时区列表内部滚动 - ([e9f9fad](https://github.com/zz-zhi54/tool/commit/e9f9fadae0e12d8236fb0b93ae36e1a3afee1154)) - zz_zhi
 
-### Notes
+### Miscellaneous Chores
 
-- 本版本主要用于补全 v0.1.9 缺失的 Windows 产物（.msi / .exe）。v0.1.9 的 macOS / Linux 资产未变，沿用。
+- **(release)** 0.1.10 → 0.1.11 - ([be239a2](https://github.com/zz-zhi54/tool/commit/be239a2ecb94fe43e09aff1729504e9c0ed876ab)) - zz_zhi
 
 ---
+## [0.1.10](https://github.com/zz-zhi54/tool/compare/v0.1.9..v0.1.10) - 2026-07-14
 
-## [0.1.9] - 2026-07-14
+### Miscellaneous Chores
 
-### Changed
+- **(release)** 0.1.9 → 0.1.10 - ([34bde61](https://github.com/zz-zhi54/tool/commit/34bde612e724c68f562f62de8fa414d405026b98)) - zz_zhi
 
-- 发布日志改为真实版本内容：新增 `CHANGELOG.md`（由 [git-cliff](https://git-cliff.org/) 按 Conventional Commits 从 git 历史生成）+ 本仓库 `cliff.toml` 配置；`.github/workflows/release.yml` 在 `tauri-action` 之前新增一步，按当前 `Cargo.toml` 的 version 提取本文件中 `## [X.Y.Z]` 段落，写入多行输出并作为 `releaseBody` 注入，替换此前写死在 workflow 中的固定模板。
+---
+## [0.1.9](https://github.com/zz-zhi54/tool/compare/v0.1.8..v0.1.9) - 2026-07-14
 
-### Notes
+### Features
 
-- 本版本主要用于测试应用内自动更新流程（v0.1.8 → v0.1.9）。
-- 功能层面无新特性；0.1.9 与 0.1.8 行为一致，仅变更发布说明的来源。
+- **(settings)** 在版本卡加入手动检查更新按钮与状态机驱动 UI - ([0068581](https://github.com/zz-zhi54/tool/commit/0068581cf74edfed326635c098129e60b06364f7)) - zz_zhi
 
+### Miscellaneous Chores
+
+- **(release)** 0.1.8 → 0.1.9 - ([52bc63b](https://github.com/zz-zhi54/tool/commit/52bc63b9c43f8bb65cebca9defee862cffd0ae2c)) - zz_zhi
+
+---
 ## [0.1.8](https://github.com/zz-zhi54/tool/compare/v0.1.7..v0.1.8) - 2026-07-14
 
 ### Bug Fixes
@@ -56,7 +57,6 @@
 - **(updater)** 砍掉 modal/手动入口，仅保留启动静默检查+后台下载+重启通知 - ([f831f69](https://github.com/zz-zhi54/tool/commit/f831f6947004f13705b5a04b42c113fd90b2035d)) - zz_zhi
 
 ---
-
 ## [0.1.7](https://github.com/zz-zhi54/tool/compare/v0.1.6..v0.1.7) - 2026-07-13
 
 ### Bug Fixes
@@ -68,7 +68,6 @@
 - **(release)** 0.1.6 → 0.1.7 - ([1dec28b](https://github.com/zz-zhi54/tool/commit/1dec28be0a0e88a49c6c354d101f9b8f7b91ce9d)) - zz_zhi
 
 ---
-
 ## [0.1.6](https://github.com/zz-zhi54/tool/compare/v0.1.5..v0.1.6) - 2026-07-13
 
 ### Bug Fixes
@@ -97,7 +96,6 @@
 - **(tools)** 大小写标签改为中文 - ([8d02c61](https://github.com/zz-zhi54/tool/commit/8d02c610e4518f121eb1fe05fe2a9a7a524730a0)) - zz_zhi
 
 ---
-
 ## [0.1.5](https://github.com/zz-zhi54/tool/compare/v0.1.4..v0.1.5) - 2026-07-13
 
 ### Bug Fixes
@@ -105,7 +103,6 @@
 - **(updater)** modal 打开即触发检查 + endpoint 国内 fallback + 0.1.5 - ([3374e89](https://github.com/zz-zhi54/tool/commit/3374e896028e48fe6b573c907cf13090c4b18723)) - zz_zhi
 
 ---
-
 ## [0.1.4](https://github.com/zz-zhi54/tool/compare/v0.1.3..v0.1.4) - 2026-07-13
 
 ### Bug Fixes
@@ -138,7 +135,6 @@
 - **(ui)** 全量迁移至 antdv 原生组件，移除手写 CSS 与 inline 样式 - ([e92946e](https://github.com/zz-zhi54/tool/commit/e92946e28846bc64d9760401c188b8ff759dcba8)) - zz_zhi
 
 ---
-
 ## [0.1.3](https://github.com/zz-zhi54/tool/compare/v0.1.2..v0.1.3) - 2026-07-10
 
 ### Bug Fixes
@@ -150,7 +146,6 @@
 - **(release)** v0.1.3 - ([eb6deac](https://github.com/zz-zhi54/tool/commit/eb6deacb8d2cf7be0d550ffa7d2a16f5b2bd3bcf)) - zz_zhi
 
 ---
-
 ## [0.1.2](https://github.com/zz-zhi54/tool/compare/v0.1.1..v0.1.2) - 2026-07-10
 
 ### Bug Fixes
@@ -165,42 +160,16 @@
 
 - **(release)** 缓存 Rust 编译产物 - ([cb8fe84](https://github.com/zz-zhi54/tool/commit/cb8fe844f045027550ef98674a0a93bf66666545)) - zz_zhi
 - **(release)** tag 检查 step 强制使用 bash shell - ([436bd11](https://github.com/zz-zhi54/tool/commit/436bd11968bbc9d79d7596bfa228924f6f1c3713)) - zz_zhi
-- **(release)** 对齐 tauri-action 官方 README，使用 **VERSION** 占位符与 draft 发布 - ([d07ab6e](https://github.com/zz-zhi54/tool/commit/d07ab6eb6af1cfd1e282b93479810179a998e89e)) - zz_zhi
+- **(release)** 对齐 tauri-action 官方 README，使用 __VERSION__ 占位符与 draft 发布 - ([d07ab6e](https://github.com/zz-zhi54/tool/commit/d07ab6eb6af1cfd1e282b93479810179a998e89e)) - zz_zhi
 
 ---
-
-## [0.1.1](https://github.com/zz-zhi54/tool/compare/v0.1.0..v0.1.1) - 2026-07-09
+## [0.1.1] - 2026-07-09
 
 ### Documentation
 
 - **(agents)** simplify release process section to GitHub-only - ([c908e94](https://github.com/zz-zhi54/tool/commit/c908e946c088712ce806b90d2fcf352f5dd2bde7)) - zz_zhi
 - **(agents)** 重写 AGENTS.md 反映 antd 迁移和项目当前结构 - ([be62214](https://github.com/zz-zhi54/tool/commit/be62214dad64df98fb901ec9ab700069c5e263fb)) - zz_zhi
 - **(ci)** 新增 .github/workflows/README.md 解释 ci.yml 与 release.yml - ([de52bd4](https://github.com/zz-zhi54/tool/commit/de52bd4780df020d7abc7f2bc0ef5daf6797f210)) - zz_zhi
-
-### Miscellaneous Chores
-
-- **(release)** v0.1.1 + 简化 release workflow 为 main push 触发 - ([e07a970](https://github.com/zz-zhi54/tool/commit/e07a9700f328bdb629f19fb555f10476b2cf0766)) - zz_zhi
-- 移除 GitHub Actions CI/CD 流程改由本地验证 - ([7c0d601](https://github.com/zz-zhi54/tool/commit/7c0d6019895f989fcd5ad300a2bba029de12753e)) - zz_zhi
-- 更新仓库指引与 prettier 忽略规则 - ([ff7444d](https://github.com/zz-zhi54/tool/commit/ff7444d4622dc34b8fec5141052035827382de73)) - zz_zhi
-
-### Style
-
-- prettier 格式化 src/assets/layout.css - ([b1fedb0](https://github.com/zz-zhi54/tool/commit/b1fedb01ff6eceac8e6704808ec61c20bb073b79)) - zz_zhi
-
-### Ci
-
-- **(release)** 新增 GitHub Actions release workflow - ([7a3a31c](https://github.com/zz-zhi54/tool/commit/7a3a31c64150904320a62e31db9ad991213f1a2c)) - zz_zhi
-- 升级 Node 20 → 24 并锁定 macos-15 解决 runner 弃用警告 - ([631981e](https://github.com/zz-zhi54/tool/commit/631981edb86803a3c1ee564eff3141de14fc2b6e)) - zz_zhi
-- 添加 dependabot 配置覆盖 cargo/npm/github-actions - ([19e0544](https://github.com/zz-zhi54/tool/commit/19e054423a24ac2d46dbd052ba3c127c378d0db5)) - zz_zhi
-- CI trigger 加入 dev 分支 - ([922dab4](https://github.com/zz-zhi54/tool/commit/922dab43b41328673c4ccffd0d77da5ca7fa3c73)) - zz_zhi
-- 重新触发 CI 验证 dev 分支 trigger - ([79e083d](https://github.com/zz-zhi54/tool/commit/79e083d45d983d36931375c806900775fa447b33)) - zz_zhi
-
----
-
-## [0.1.0] - 2026-07-09
-
-### Documentation
-
 - claude - ([e577d93](https://github.com/zz-zhi54/tool/commit/e577d936292adc8ee1aedda5db4b5ecaa5aa9be9)) - zz_zhi
 - update claude.md with navigation and storage documentation - ([cf241b9](https://github.com/zz-zhi54/tool/commit/cf241b98eaf6e81127e68db98963c25d3528ab26)) - zz_zhi
 
@@ -218,10 +187,25 @@
 ### Miscellaneous Chores
 
 - **(release)** v0.1.0 首发版本 - ([c01956c](https://github.com/zz-zhi54/tool/commit/c01956ccf093481754d7c12fe62bf69a2b5b8978)) - zz_zhi
+- **(release)** v0.1.1 + 简化 release workflow 为 main push 触发 - ([e07a970](https://github.com/zz-zhi54/tool/commit/e07a9700f328bdb629f19fb555f10476b2cf0766)) - zz_zhi
 - **(tauri)** increase default window dimensions - ([4f7e13f](https://github.com/zz-zhi54/tool/commit/4f7e13fe0fb38aa08af5180b66851be8801561ff)) - zz_zhi
+- 移除 GitHub Actions CI/CD 流程改由本地验证 - ([7c0d601](https://github.com/zz-zhi54/tool/commit/7c0d6019895f989fcd5ad300a2bba029de12753e)) - zz_zhi
+- 更新仓库指引与 prettier 忽略规则 - ([ff7444d](https://github.com/zz-zhi54/tool/commit/ff7444d4622dc34b8fec5141052035827382de73)) - zz_zhi
 
 ### Refactoring
 
 - **(ui)** 重构组件结构，内联主题切换并简化搜索功能 - ([c768b3c](https://github.com/zz-zhi54/tool/commit/c768b3c6d83db91ad9c0a9a88d7711e263408627)) - zz_zhi
+
+### Style
+
+- prettier 格式化 src/assets/layout.css - ([b1fedb0](https://github.com/zz-zhi54/tool/commit/b1fedb01ff6eceac8e6704808ec61c20bb073b79)) - zz_zhi
+
+### Ci
+
+- **(release)** 新增 GitHub Actions release workflow - ([7a3a31c](https://github.com/zz-zhi54/tool/commit/7a3a31c64150904320a62e31db9ad991213f1a2c)) - zz_zhi
+- 升级 Node 20 → 24 并锁定 macos-15 解决 runner 弃用警告 - ([631981e](https://github.com/zz-zhi54/tool/commit/631981edb86803a3c1ee564eff3141de14fc2b6e)) - zz_zhi
+- 添加 dependabot 配置覆盖 cargo/npm/github-actions - ([19e0544](https://github.com/zz-zhi54/tool/commit/19e054423a24ac2d46dbd052ba3c127c378d0db5)) - zz_zhi
+- CI trigger 加入 dev 分支 - ([922dab4](https://github.com/zz-zhi54/tool/commit/922dab43b41328673c4ccffd0d77da5ca7fa3c73)) - zz_zhi
+- 重新触发 CI 验证 dev 分支 trigger - ([79e083d](https://github.com/zz-zhi54/tool/commit/79e083d45d983d36931375c806900775fa447b33)) - zz_zhi
 
 <!-- generated by git-cliff -->
