@@ -8,6 +8,18 @@
 
 ---
 
+## [0.1.10] - 2026-07-14
+
+### Bug Fixes
+
+- **(ci)** 给 `Extract CHANGELOG section` step 显式加 `shell: bash`。Windows runner 默认把 `run:` 喂给 PowerShell 7，整段脚本是 bash 写的（`set -euo pipefail` / `awk` BEGIN 块 / `if ! grep -q ...; then ... fi`），pwsh 在词法分析阶段就被 `!` 卡住报 parser error，导致 windows-2022 job 整体失败、release 状态显示 `failure`。Git Bash 在 windows-* runner 默认可用，强制走 bash 后三平台走同一解释器。
+
+### Notes
+
+- 本版本主要用于补全 v0.1.9 缺失的 Windows 产物（.msi / .exe）。v0.1.9 的 macOS / Linux 资产未变，沿用。
+
+---
+
 ## [0.1.9] - 2026-07-14
 
 ### Changed
