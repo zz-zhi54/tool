@@ -46,7 +46,6 @@ Rust 端使用标准 Cargo 命令（在 `src-tauri/` 内执行 `cargo build`、`
 
 - 遵循 [Conventional Commits](https://www.conventionalcommits.org/)：`feat(tools):`、`fix(ui):`、`refactor(layout):`、`chore(release):`、`docs:`。
 - 主题行保持简短。正文说明 **为什么** 而非做了什么。
-- UI 改动必须在 PR 描述中附上截图。
 - 禁止提交构建产物：`src-tauri/gen/`、`src-tauri/target/`、`dist/`、`node_modules/`。
 - CI 仅在 push 到 `main` 分支时触发；PR 不自动构建。Dependabot 负责依赖版本更新。
 - 提交 PR 前同步 bump 版本号：`package.json`、`src-tauri/Cargo.toml`、`src-tauri/tauri.conf.json` 三处保持一致（前端与 Rust 端必须同步）。
@@ -59,6 +58,24 @@ Rust 端使用标准 Cargo 命令（在 `src-tauri/` 内执行 `cargo build`、`
 3. 在 `src/tools/registry.ts` 中注册 — 填写 `category`、`icon`、`status`、`accent`
 4. 如需新 Tauri 权限，更新 `src-tauri/capabilities/default.json`
 5. 工具放入某个分类后自动继承该分类的 `accent`，除非显式覆盖
+
+## Settings & Persistence
+
+设置项的元信息集中在 [`src/utils/storage.ts`](./src/utils/storage.ts)：
+
+- `SETTINGS`：所有用户偏好的元数据（`key` / `label` / `description` / `group` / `defaultValue` / `control`）。
+- `SETTING_GROUPS`：设置页顶层分组的元数据，支持 `parent` 嵌套。
+- `getSettings()`：返回当前快照（值、默认值、是否被修改等），设置页直接消费。
+- `load(key, fallback)` / `save(key, value)`：底层 localStorage 读写，对 JSON 解析失败做容错。
+
+新增一个用户偏好的标准流程：
+
+1. 在 `src/utils/storage.ts` 顶部声明 key 常量（如 `export const FOO_KEY = "foo:bar"`），并在 `SETTINGS` 追加一条 `SettingMeta`。
+2. 如需新的设置分组，往 `SETTING_GROUPS` 追加 `SettingGroupMeta`（可填 `parent` 嵌套）。
+3. 业务代码用 `load(FOO_KEY, fallback)` 读取初始值，用 `save(FOO_KEY, value)` 持久化。
+4. 控件类型在 `SettingMeta.control` 声明（`toggle` / `checkboxes`），UI 由 `SettingItem` 自动渲染；恢复默认调 `remove(key)`。
+
+只有「真正的用户偏好」走这条路径；UI 临时状态（分栏比例、侧边栏折叠等）由组件自己管理，不进入设置页。
 
 ## Agent 专用说明
 
