@@ -3,6 +3,20 @@
 此项目的所有显着更改都将记录在此文件中。请参阅 [常规提交](https://www.conventionalcommits.org/) 了解提交指南。
 
 ---
+## [0.1.13](https://github.com/zz-zhi54/tool/compare/v0.1.12..v0.1.13) - 2026-07-14
+
+### Documentation
+
+- **(agents)** 新增 Settings & Persistence 约定章节并移除截图要求 - ([b3b1ad8](https://github.com/zz-zhi54/tool/commit/b3b1ad81466951342927f1b872a718004dbf7618)) - zz_zhi
+- **(agents)** 记录 CHANGELOG 由 git-cliff 生成、禁止手写 - ([7eee441](https://github.com/zz-zhi54/tool/commit/7eee4415250bb9e6d348b2295c6499ba909e77e1)) - zz_zhi
+
+### Miscellaneous Chores
+
+- **(release)** 同步 Cargo.lock 中 tool crate 版本到 0.1.12 - ([11ac99f](https://github.com/zz-zhi54/tool/commit/11ac99f6e7ee9aa788ec38f92f57181e3ee1ff12)) - zz_zhi
+- **(release)** 0.1.12 → 0.1.13 - ([4a2250f](https://github.com/zz-zhi54/tool/commit/4a2250f94228ba443fcc0be315645464ec3361ef)) - zz_zhi
+- **(release)** 同步 Cargo.lock 中 tool crate 版本到 0.1.13 - ([bbd8a9c](https://github.com/zz-zhi54/tool/commit/bbd8a9c201ddcefa257cf7a1ee4310077708e0c2)) - zz_zhi
+
+---
 ## [0.1.12](https://github.com/zz-zhi54/tool/compare/v0.1.11..v0.1.12) - 2026-07-14
 
 ### Bug Fixes
@@ -13,6 +27,7 @@
 
 - **(agents)** 记录版本 bump 后必须重生成 CHANGELOG 的规范 - ([4a4ae60](https://github.com/zz-zhi54/tool/commit/4a4ae6007f2830c04440174932793ca3995079db)) - zz_zhi
 - **(changelog)** 重新生成 0.1.11 段落 - ([e9a83e0](https://github.com/zz-zhi54/tool/commit/e9a83e03fa639c06102ab1ba34d341ed5e825963)) - zz_zhi
+- **(changelog)** 重新生成 0.1.12 段落 - ([245c92b](https://github.com/zz-zhi54/tool/commit/245c92b6cbcff19e955b02c86219d6e1beaea663)) - zz_zhi
 
 ### Miscellaneous Chores
 
