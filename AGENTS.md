@@ -48,6 +48,7 @@ Rust 端使用标准 Cargo 命令（在 `src-tauri/` 内执行 `cargo build`、`
 - 主题行保持简短。正文说明 **为什么** 而非做了什么。
 - 禁止提交构建产物：`src-tauri/gen/`、`src-tauri/target/`、`dist/`、`node_modules/`。
 - CI 仅在 push 到 `main` 分支时触发；PR 不自动构建。Dependabot 负责依赖版本更新。
+- **CHANGELOG.md 唯一受信任的来源是 `git-cliff -o CHANGELOG.md`，不要手写 entry。**
 - 提交 PR 前同步 bump 版本号：`package.json`、`src-tauri/Cargo.toml`、`src-tauri/tauri.conf.json` 三处保持一致（前端与 Rust 端必须同步）。
 - 提交 PR 前同步 bump 版本号后，必须跑 `git-cliff -o CHANGELOG.md` 重新生成 release notes，并把生成结果包含在同一次 PR 里。`release.yml` 的 `Extract CHANGELOG section` step 会按 `tauri.conf.json` 的版本号 `grep -q "^## \[X.Y.Z\]" CHANGELOG.md`，找不到就 fail。CHANGELOG 文件头注明由 git-cliff 自动生成，手写段落会被覆盖，不要手维护。
 
