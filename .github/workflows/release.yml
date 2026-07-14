@@ -64,6 +64,34 @@ jobs:
       - name: Install frontend deps
         run: npm ci
 
+      # 从 CHANGELOG.md 提取当前 version 对应的 `## [X.Y.Z]` 段落作为 releaseBody，
+      # 替换早期写死的固定模板。CHANGELOG.md 由 git-cliff 从 Conventional Commits
+      # 历史生成（详见 cliff.toml），未发布版本的段落可手写。
+      - name: Extract CHANGELOG section
+        id: changelog
+        run: |
+          set -euo pipefail
+          VERSION=$(grep -m1 '"version"' src-tauri/tauri.conf.json \
+            | sed -E 's/.*"([0-9]+\.[0-9]+\.[0-9]+)".*/\1/')
+          {
+            echo "body<<EOF"
+            awk -v v="$VERSION" '
+              BEGIN { keep = 0 }
+              match($0, /^## \[[0-9]+\.[0-9]+\.[0-9]+\]/) {
+                v_full = substr($0, RSTART+4, RLENGTH-5)
+                if (keep) exit
+                if (v_full == v) keep = 1
+              }
+              keep { print }
+            ' CHANGELOG.md
+            echo "EOF"
+          } >> "$GITHUB_OUTPUT"
+          # 没找到段落就让 CI 失败，而不是静默发布空 release body。
+          if ! grep -q "^## \[$VERSION\]" CHANGELOG.md; then
+            echo "::error::CHANGELOG.md 中未找到版本 $VERSION 的段落"
+            exit 1
+          fi
+
       - name: Build & publish release
         uses: tauri-apps/tauri-action@v1
         with:
@@ -72,22 +100,7 @@ jobs:
           releaseDraft: false
           prerelease: false
           args: ${{ matrix.args }}
-          releaseBody: |
-            ## Tool v__VERSION__
-
-            桌面端安装包，覆盖 macOS (Apple Silicon) / Windows (x64) / Linux (x64)。
-
-            ### 下载
-
-            - **macOS (Apple Silicon)**: `tool_aarch64.dmg`
-            - **Windows (x64)**: `tool_x64-setup.exe`
-            - **Linux (x64)**: `tool_amd64.AppImage` / `.deb`
-
-            ### 已知问题
-
-            - macOS 安装包未做代码签名 / 未公证，首次打开需在「系统设置 → 隐私与安全性」点击「仍要打开」。如「仍要打开」按钮未显示，可在终端执行 `xattr -dr com.apple.quarantine /Applications/tool.app` 后重试。
-            - Windows / Linux 安装包未数字签名，杀毒软件可能误报。
-            - 应用内自动更新已启用：在「设置 → 关于 → 检查更新」即可一键升级。
+          releaseBody: ${{ steps.changelog.outputs.body }}
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
