@@ -84,6 +84,18 @@ const progress = computed(() =>
  */
 const hasUpdate = ref(false);
 
+/** 远程版本检查状态；独立于下载 / 安装状态机，仅供只读信息展示。 */
+type RemoteVersionStatus =
+  | "idle"
+  | "checking"
+  | "checked"
+  | "error"
+  | "unavailable";
+
+/** 启动静默检查发现的远程版本；无更新时由展示层回退为当前版本。 */
+const remoteVersion = shallowRef<string | null>(null);
+const remoteVersionStatus = ref<RemoteVersionStatus>("idle");
+
 /**
  * 用户主动检查正在进行中。静默检查看到此标志会**完全跳过本轮**，
  * 避免：
@@ -152,15 +164,21 @@ export function useAutoUpdater() {
    * 用 userCheckInFlight + silentCheckInFlight 互斥，避免与主动检查抢状态。
    */
   async function checkAndDownloadSilently(): Promise<void> {
-    if (!import.meta.env.PROD || !isTauri()) return;
+    if (!import.meta.env.PROD || !isTauri()) {
+      remoteVersionStatus.value = "unavailable";
+      return;
+    }
 
     await waitForSilentlyIdle();
     if (userCheckInFlight.value) return;
 
     silentCheckInFlight.value = true;
     userCheckInFlight.value = true;
+    remoteVersionStatus.value = "checking";
     try {
       const update = await check({ timeout: CHECK_TIMEOUT_MS });
+      remoteVersion.value = update?.version ?? null;
+      remoteVersionStatus.value = "checked";
       if (!update) return;
 
       info.value = {
@@ -193,7 +211,9 @@ export function useAutoUpdater() {
         error.value = { stage: "download", cause: new Error("静默下载失败") };
       }
     } catch {
-      // check() 失败静默；不动 status
+      // check() 失败静默；仅记录远程版本获取失败，不污染下载状态机
+      remoteVersion.value = null;
+      remoteVersionStatus.value = "error";
     } finally {
       silentCheckInFlight.value = false;
       userCheckInFlight.value = false;
@@ -368,6 +388,8 @@ export function useAutoUpdater() {
   // 显式引用本文件私有状态/行为，避免 vue-tsc 的 noUnusedLocals 误报
   // （这些在 return 中以 shorthand 形式暴露，TS 静态分析无法追踪）。
   void progress;
+  void remoteVersion;
+  void remoteVersionStatus;
   void checkSilently;
   void checkOnly;
   void waitForSilentlyIdle;
@@ -383,6 +405,8 @@ export function useAutoUpdater() {
     progress,
     error,
     hasUpdate,
+    remoteVersion,
+    remoteVersionStatus,
     // 行为
     checkOnly,
     checkSilently,

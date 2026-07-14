@@ -4,6 +4,7 @@ import { computed, ref } from "vue";
 import { ReloadOutlined } from "@ant-design/icons-vue";
 
 import SettingItem from "../../components/SettingItem.vue";
+import { useAutoUpdater } from "../../composables/useAutoUpdater";
 import { showInfo } from "../../composables/useMessage";
 import {
   getSettings,
@@ -17,6 +18,16 @@ import type {
   SettingGroupMeta,
   SettingSnapshot,
 } from "../../utils/storage";
+
+import packageInfo from "../../../package.json";
+
+const appVersion = packageInfo.version;
+const { remoteVersion, remoteVersionStatus } = useAutoUpdater();
+const remoteDisplayVersion = computed(() =>
+  remoteVersionStatus.value === "checked"
+    ? (remoteVersion.value ?? appVersion)
+    : null,
+);
 
 const items = ref<SettingSnapshot[]>(getSettings());
 
@@ -113,6 +124,41 @@ function resetAll() {
             @reset="resetItem"
           />
         </a-flex>
+      </a-card>
+
+      <a-card size="small" title="版本信息">
+        <a-descriptions size="small" :column="1">
+          <a-descriptions-item label="当前版本">
+            <a-tag color="blue">v{{ appVersion }}</a-tag>
+          </a-descriptions-item>
+          <a-descriptions-item label="远程最新版本">
+            <a-tag
+              v-if="remoteDisplayVersion"
+              :color="remoteVersion ? 'orange' : 'green'"
+            >
+              v{{ remoteDisplayVersion }}
+            </a-tag>
+            <a-spin
+              v-else-if="remoteVersionStatus === 'checking'"
+              size="small"
+            />
+            <a-typography-text
+              v-else-if="remoteVersionStatus === 'error'"
+              type="danger"
+            >
+              获取失败
+            </a-typography-text>
+            <a-typography-text
+              v-else-if="remoteVersionStatus === 'unavailable'"
+              type="secondary"
+            >
+              仅正式桌面版可用
+            </a-typography-text>
+            <a-typography-text v-else type="secondary">
+              等待检查
+            </a-typography-text>
+          </a-descriptions-item>
+        </a-descriptions>
       </a-card>
     </a-flex>
   </a-flex>
