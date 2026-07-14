@@ -69,6 +69,11 @@ jobs:
       # 历史生成（详见 cliff.toml），未发布版本的段落可手写。
       - name: Extract CHANGELOG section
         id: changelog
+        # Windows runner 默认把 run 喂给 PowerShell 7，整段脚本是 bash 写的
+        # （set -euo pipefail / awk BEGIN 块 / if ! grep -q ...; then），pwsh 在
+        # 词法分析阶段就被 `!` 卡住报 parser error。Git Bash 在 windows-* runner
+        # 上默认可用，显式声明 shell 让三个平台走同一解释器。
+        shell: bash
         run: |
           set -euo pipefail
           VERSION=$(grep -m1 '"version"' src-tauri/tauri.conf.json \
