@@ -83,4 +83,16 @@ export function useUpdateNotification() {
     },
     { immediate: false },
   );
+
+  // 任意入口触发重启（设置页「立即重启」/ 顶部通知按钮）都关闭顶部通知，
+  // 避免「已点重启但通知还在」的视觉残留。
+  // 不在 useAutoUpdater.relaunch() 里反向引用 notification —— 保持
+  // composable 之间的单向数据流（useAutoUpdater 不知道通知存在）。
+  watch(
+    status,
+    (s) => {
+      if (s === "relaunching") notification.close(NOTICE_KEY);
+    },
+    { immediate: false },
+  );
 }

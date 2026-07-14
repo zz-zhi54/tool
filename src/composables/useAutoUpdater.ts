@@ -8,7 +8,7 @@
  * - **单例状态**：所有 ref 都在模块顶层，多个组件同时调用 `useAutoUpdater()`
  *   会拿到同一组响应式状态。这样挂在不同位置的更新入口（侧边栏、设置页）
  *   能看到一致的 status / info / progress。
- * - **状态机**：`idle | checking | up-to-date | available | downloading | ready | error`。
+ * - **状态机**：`idle | checking | up-to-date | available | downloading | ready | relaunching | error`。
  *   UI 只需绑定一个 status + 一个 progress（0-100），不直接处理 Update 对象，
  *   避免组件里堆 try/catch。
  * - **使用官方 API**：
@@ -92,7 +92,7 @@ type RemoteVersionStatus =
   | "error"
   | "unavailable";
 
-/** 启动静默检查发现的远程版本；无更新时由展示层回退为当前版本。 */
+/** 远程服务器上的最新版本号。启动静默检查与手动检查都会写入；未成功 check 时保持 null，展示层回退为当前版本。 */
 const remoteVersion = shallowRef<string | null>(null);
 const remoteVersionStatus = ref<RemoteVersionStatus>("idle");
 
@@ -255,8 +255,14 @@ export function useAutoUpdater() {
       } catch (cause) {
         status.value = "error";
         error.value = { stage: "check", cause };
+        // 同步远端版本状态：手动检查失败时设置页也要显示「获取失败」
+        remoteVersionStatus.value = "error";
         return status.value;
       }
+
+      // 远端版本探测成功（无论有没有新版本）。设置页的版本号展示直接据此
+      // 渲染，不另起一个并行状态机——「启动静默检查」与「手动检查」共享同一组 ref。
+      remoteVersionStatus.value = "checked";
 
       if (!update) {
         status.value = "up-to-date";
@@ -264,6 +270,9 @@ export function useAutoUpdater() {
         return status.value;
       }
 
+      // 与 checkAndDownloadSilently 保持一致：拿到 update 时把远端版本号
+      // 写入 remoteVersion，避免「下载中却仍显示当前版本」的不一致。
+      remoteVersion.value = update.version;
       info.value = {
         version: update.version,
         notes: update.body ?? undefined,
@@ -321,6 +330,8 @@ export function useAutoUpdater() {
         return status.value;
       }
 
+      // 与 checkOnly 对齐：手动点「立即更新」时把远端版本号也写进 remoteVersion。
+      remoteVersion.value = update.version;
       info.value = {
         version: update.version,
         notes: update.body ?? undefined,
@@ -384,17 +395,6 @@ export function useAutoUpdater() {
       error.value = { stage: "relaunch", cause };
     }
   }
-
-  // 显式引用本文件私有状态/行为，避免 vue-tsc 的 noUnusedLocals 误报
-  // （这些在 return 中以 shorthand 形式暴露，TS 静态分析无法追踪）。
-  void progress;
-  void remoteVersion;
-  void remoteVersionStatus;
-  void checkSilently;
-  void checkOnly;
-  void waitForSilentlyIdle;
-  void runUpdateFlow;
-  void checkAndDownloadSilently;
 
   return {
     // 状态
