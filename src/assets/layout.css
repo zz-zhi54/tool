@@ -55,3 +55,38 @@ textarea.ant-input {
 [data-tauri-drag-region] .no-drag {
   -webkit-app-region: no-drag;
 }
+
+/* ── 滚动条 ─────────────────────────────────────── */
+
+/**
+ * Windows 上的 WebView2 默认滚动条是宽白色矩形，与浅色背景撞色、
+ * 与深色背景对比过强。这里统一收紧为细条并跟随主题色，保持三平台视觉一致。
+ *
+ * 同时写 CSS Scrollbars Level 1（`scrollbar-width` / `scrollbar-color`）
+ * 与 `::-webkit-scrollbar`，覆盖新旧 WebView2 版本。
+ */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--app-border-strong) transparent;
+}
+
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--app-border-strong);
+  border-radius: 5px;
+  border: 2px solid transparent;
+  background-clip: padding-box;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--app-text-muted);
+  background-clip: padding-box;
+}
